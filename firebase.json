@@ -1,0 +1,51 @@
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [
+      {
+        "source": "index.html",
+        "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
+        "source": "flutter_service_worker.js",
+        "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {"key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups"},
+          {"key": "Cache-Control", "value": "no-cache, must-revalidate"}
+        ]
+      }
+    ],
+    "rewrites": [{"source": "**", "destination": "/index.html"}]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "appDistribution": {
+    "appId": "1:482669449729:android:70e002d708a14a0ab3a600",
+    "groups": ["qa-testers"]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "rideksa-84949",
+          "appId": "1:482669449729:android:70e002d708a14a0ab3a600",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "rideksa-84949",
+          "configurations": {
+            "android": "1:482669449729:android:70e002d708a14a0ab3a600",
+            "web": "1:482669449729:web:4f3645a2c52101d1b3a600"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RideKSA – Download Android APK</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 24px 16px; line-height: 1.6;
+    background: #f5f7fb; color: #1a1a2e;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0f1222; color: #e8eaf6; }
+    .card { background: #1a1f38; box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+    code { background: #0d1020; }
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  .card {
+    background: #fff; border-radius: 14px; padding: 28px;
+    box-shadow: 0 4px 20px rgba(23,32,90,.08); margin-bottom: 20px;
+  }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  h2 { font-size: 18px; margin: 22px 0 8px; }
+  p { margin: 8px 0; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 13px; background:#e6f4ea; color:#137333; font-weight:600; }
+  .btn {
+    display: inline-block; background: #1668e3; color: #fff !important; text-decoration: none;
+    padding: 14px 26px; border-radius: 10px; font-weight: 700; font-size: 16px; margin: 10px 0 4px;
+  }
+  .btn:hover { background: #0f56c4; }
+  code {
+    background: #eef1f8; border-radius: 6px; padding: 2px 6px;
+    font-size: 13px; word-break: break-all;
+  }
+  .hash {
+    display: block; background: #eef1f8; border-radius: 8px; padding: 12px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 13px; word-break: break-all;
+  }
+  ol { padding-left: 20px; }
+  li { margin: 6px 0; }
+  .muted { color: #5f6368; font-size: 13px; }
+  @media (prefers-color-scheme: dark) { .muted { color:#9aa0b4; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <span class="badge">Secure sideload build</span>
+    <h1>RideKSA for Android</h1>
+    <p>Group rides &amp; transport across Saudi Arabia. Flat fares, instant booking.</p>
+    <p>
+      <a class="btn" href="/app-release.apk" download="app-release.apk">Download app-release.apk (54.5 MB)</a><br>
+      <span class="muted">Version 0.0.5 (build 8) &middot; min Android 7.0 (API 24) &middot; target API 36</span>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Verify file integrity</h2>
+    <p>After downloading, compare the SHA-256 checksum. It must match exactly:</p>
+    <code class="hash">29ec74ca402ff631bd5fce6bcee555bcf97362bf906536c10df3218d2760c86a</code>
+    <p class="muted">Windows (PowerShell): <code>Get-FileHash .\app-release.apk -Algorithm SHA256</code></p>
+    <p class="muted">macOS / Linux: <code>shasum -a 256 app-release.apk</code></p>
+  </div>
+
+  <div class="card">
+    <h2>Installation steps (Android)</h2>
+    <ol>
+      <li>Download the APK with your browser (Chrome recommended).</li>
+      <li>When Chrome asks to install, tap <strong>OK / Install</strong>. If blocked, follow step 3.</li>
+      <li>Go to <strong>Settings &rarr; Apps &rarr; Chrome &rarr; Advanced &rarr; Install unknown apps</strong> (or "Special app access") and allow <strong>Allow from this source</strong>.</li>
+      <li>Return to the download, tap the APK, then <strong>Install</strong>.</li>
+      <li>Open <strong>RideKSA</strong> and sign in with Google or email.</li>
+    </ol>
+    <p class="muted">If Play Protect shows a warning, tap <strong>More details &rarr; Install anyway</strong>. The app is signed by GalaxyLabs (RideKSA).</p>
+  </div>
+
+  <div class="card">
+    <h2>Trust &amp; privacy</h2>
+    <ul>
+      <li>Signed with release key (V2/V3 signature schemes) &middot; cert: <code>CN=RideKSA, O=GalaxyLabs, C=SA</code></li>
+      <li>All network traffic uses HTTPS; cleartext is disabled at the OS level.</li>
+      <li>Only location + notification permissions are requested (for live trip tracking).</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

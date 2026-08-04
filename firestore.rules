@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Authenticated app users may read/write the realtime cache.
+    // Frappe remains the authoritative system of record.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Users may always read/write their own profile.
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.uid == uid);
+    }
+
+    // Shared realtime cache collections used across all roles.
+    match /{document=**} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}
