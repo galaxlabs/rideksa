@@ -24,14 +24,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final trips = await _frappe.getMyTrips();
+      final startedTrips = trips
+          .where((trip) => _isHistoryTrip(trip['trip_status']?.toString()))
+          .toList();
       if (!mounted) return;
-      setState(() { _trips = trips; _loading = false; });
+      setState(() {
+        _trips = startedTrips;
+        _loading = false;
+      });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
   }
 
@@ -43,52 +55,100 @@ class _HistoryScreenState extends State<HistoryScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
                   const SizedBox(height: 12),
                   Text(_error!, style: const TextStyle(color: Colors.grey)),
                   const SizedBox(height: 12),
                   OutlinedButton(onPressed: _load, child: const Text('Retry')),
-                ]))
-              : _trips.isEmpty
-                  ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.history, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text('No trip history yet', style: TextStyle(color: Colors.grey, fontSize: 16)),
-                    ]))
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _trips.length,
-                        separatorBuilder: (_, i) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final trip = _trips[index];
-                          return Card(
-                            child: ListTile(
-                              leading: Container(
-                                width: 40, height: 40,
-                                decoration: BoxDecoration(color: AppColors.primary.withAlpha(15), borderRadius: BorderRadius.circular(10)),
-                                child: const Icon(Icons.directions_bus, color: AppColors.primary, size: 20),
-                              ),
-                              title: Text(trip['trip_title']?.toString() ?? trip['name'].toString(), style: const TextStyle(fontWeight: FontWeight.w600)),
-                              subtitle: Text('${trip['trip_date'] ?? ''}  •  ${trip['route'] ?? '—'}'),
-                              trailing: Text(trip['trip_status']?.toString() ?? '', style: TextStyle(color: _statusColor(trip['trip_status']?.toString()), fontWeight: FontWeight.w600, fontSize: 12)),
-                            ),
-                          );
-                        },
+                ],
+              ),
+            )
+          : _trips.isEmpty
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.history, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'No started trip history yet',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: _trips.length,
+                separatorBuilder: (_, i) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final trip = _trips[index];
+                  return Card(
+                    child: ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withAlpha(15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.directions_bus,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(
+                        trip['trip_title']?.toString() ??
+                            trip['name'].toString(),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        '${trip['trip_date'] ?? ''}  •  ${trip['route'] ?? '—'}',
+                      ),
+                      trailing: Text(
+                        trip['trip_status']?.toString() ?? '',
+                        style: TextStyle(
+                          color: _statusColor(trip['trip_status']?.toString()),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
+                  );
+                },
+              ),
+            ),
     );
   }
 
   Color _statusColor(String? s) {
     switch (s) {
-      case 'Completed': return AppColors.success;
-      case 'inProgress': return Colors.teal;
-      case 'Cancelled': return Colors.red;
-      case 'Scheduled': return Colors.blue;
-      default: return Colors.grey;
+      case 'Completed':
+        return AppColors.success;
+      case 'Departed':
+        return Colors.teal;
+      case 'Arrived':
+        return Colors.indigo;
+      case 'Cancelled':
+        return Colors.red;
+      case 'Scheduled':
+        return Colors.blue;
+      default:
+        return Colors.grey;
     }
+  }
+
+  bool _isHistoryTrip(String? status) {
+    return status == 'Departed' ||
+        status == 'Arrived' ||
+        status == 'Completed' ||
+        status == 'Cancelled';
   }
 }
