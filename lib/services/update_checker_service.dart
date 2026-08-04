@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import '../core/constants.dart';
 import 'app_config_service.dart';
 
 class UpdateInfo {
@@ -23,19 +25,20 @@ class UpdateInfo {
 
 class UpdateCheckerService {
   static const String githubRepo = 'galaxlabs/rideksa';
-  static const String githubApiLatest = 'https://api.github.com/repos/$githubRepo/releases/latest';
+  static const String githubApiLatest =
+      'https://api.github.com/repos/$githubRepo/releases/latest';
 
   String get _landingBaseUrl =>
       AppConfigService.instance.config.updateCheckUrl.isNotEmpty
-          ? _stripPath(AppConfigService.instance.config.updateCheckUrl)
-          : 'https://rideksa.celtcoksa.com';
+      ? _stripPath(AppConfigService.instance.config.updateCheckUrl)
+      : 'https://rideksa.celtcoksa.com';
 
   String get releasesJsonUrl => '$_landingBaseUrl/releases.json';
 
   String get defaultApkUrl =>
       AppConfigService.instance.config.apkDownloadUrl.isNotEmpty
-          ? AppConfigService.instance.config.apkDownloadUrl
-          : '$_landingBaseUrl/app-release.apk';
+      ? AppConfigService.instance.config.apkDownloadUrl
+      : '$_landingBaseUrl/app-release.apk';
 
   String _stripPath(String url) {
     final uri = Uri.tryParse(url);
@@ -62,10 +65,15 @@ class UpdateCheckerService {
   }
 
   Future<UpdateInfo?> _fetchFromGithub() async {
-    final res = await _client.get(
-      Uri.parse(githubApiLatest),
-      headers: {'Accept': 'application/vnd.github+json', 'User-Agent': 'RideKSA'},
-    ).timeout(const Duration(seconds: 10));
+    final res = await _client
+        .get(
+          Uri.parse(githubApiLatest),
+          headers: {
+            'Accept': 'application/vnd.github+json',
+            'User-Agent': 'RideKSA',
+          },
+        )
+        .timeout(const Duration(seconds: 10));
     if (res.statusCode != 200) return null;
 
     final json = jsonDecode(res.body) as Map<String, dynamic>;
@@ -74,7 +82,8 @@ class UpdateCheckerService {
     if (match == null) return null;
 
     final version = match.group(1)!;
-    final build = int.tryParse(match.group(2) ?? '') ?? _buildFromVersion(version);
+    final build =
+        int.tryParse(match.group(2) ?? '') ?? _buildFromVersion(version);
 
     String apkUrl = defaultApkUrl;
     final assets = json['assets'] as List? ?? [];
@@ -102,7 +111,8 @@ class UpdateCheckerService {
   }
 
   Future<UpdateInfo?> _fetchFromLanding() async {
-    final res = await _client.get(Uri.parse(releasesJsonUrl))
+    final res = await _client
+        .get(Uri.parse(releasesJsonUrl))
         .timeout(const Duration(seconds: 10));
     if (res.statusCode != 200) return null;
     final list = jsonDecode(res.body) as List;
@@ -136,10 +146,19 @@ class UpdateCheckerService {
   Future<UpdateInfo?> checkForUpdate() async {
     final info = await fetchLatest();
     if (info == null) return null;
-    final pkg = await PackageInfo.fromPlatform();
-    final currentBuild = int.tryParse(pkg.buildNumber) ?? 0;
+    final currentBuild = await _currentBuildNumber();
     if (!info.isNewerThan(currentBuild)) return null;
     return info;
+  }
+
+  Future<int> _currentBuildNumber() async {
+    if (kIsWeb) return AppConstants.appBuildNumber;
+    try {
+      final pkg = await PackageInfo.fromPlatform();
+      return int.tryParse(pkg.buildNumber) ?? AppConstants.appBuildNumber;
+    } catch (_) {
+      return AppConstants.appBuildNumber;
+    }
   }
 
   void debugPrintSafe(String msg) {

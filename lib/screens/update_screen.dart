@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../core/constants.dart';
 import '../core/theme.dart';
 import '../services/update_checker_service.dart';
 import '../widgets/sidebar_page.dart';
@@ -14,8 +16,9 @@ class UpdateScreen extends StatefulWidget {
 
 class _UpdateScreenState extends State<UpdateScreen> {
   final UpdateCheckerService _updates = UpdateCheckerService();
-  PackageInfo? _packageInfo;
   UpdateInfo? _latest;
+  String _version = AppConstants.appVersion;
+  int _build = AppConstants.appBuildNumber;
   bool _loading = true;
   String? _error;
 
@@ -31,13 +34,20 @@ class _UpdateScreenState extends State<UpdateScreen> {
       _error = null;
     });
     try {
+      final packageFuture = kIsWeb
+          ? Future<dynamic>.value(null)
+          : PackageInfo.fromPlatform();
       final results = await Future.wait<dynamic>([
-        PackageInfo.fromPlatform(),
+        packageFuture,
         _updates.fetchLatest(),
       ]);
       if (!mounted) return;
+      final packageInfo = results[0] as PackageInfo?;
       setState(() {
-        _packageInfo = results[0] as PackageInfo;
+        _version = packageInfo?.version ?? AppConstants.appVersion;
+        _build =
+            int.tryParse(packageInfo?.buildNumber ?? '') ??
+            AppConstants.appBuildNumber;
         _latest = results[1] as UpdateInfo?;
         _loading = false;
       });
@@ -64,8 +74,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentBuild = int.tryParse(_packageInfo?.buildNumber ?? '') ?? 0;
-    final hasUpdate = _latest != null && _latest!.isNewerThan(currentBuild);
+    final hasUpdate = _latest != null && _latest!.isNewerThan(_build);
 
     return SidebarPage(
       title: 'Update App',
@@ -95,9 +104,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      'Installed version: ${_packageInfo?.version ?? '-'} build ${_packageInfo?.buildNumber ?? '-'}',
-                    ),
+                    Text('Installed version: $_version build $_build'),
                     const SizedBox(height: 8),
                     if (_loading)
                       const Padding(

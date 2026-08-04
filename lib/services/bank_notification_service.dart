@@ -9,32 +9,73 @@ class BankNotificationEvent {
   final String title;
   final String text;
   final double? amount;
-  BankNotificationEvent({required this.app, required this.title, required this.text})
-      : amount = BankNotificationService.parseAmount('$title $text');
+  BankNotificationEvent({
+    required this.app,
+    required this.title,
+    required this.text,
+  }) : amount = BankNotificationService.parseAmount('$title $text');
 }
 
 class BankNotificationService {
-  static const EventChannel _channel = EventChannel('rideksa/bank_notifications');
+  static const EventChannel _channel = EventChannel(
+    'rideksa/bank_notifications',
+  );
   final FirestoreService _firestore;
   StreamSubscription? _sub;
-  final ValueNotifier<BankNotificationEvent?> lastEvent = ValueNotifier<BankNotificationEvent?>(null);
+  final ValueNotifier<BankNotificationEvent?> lastEvent =
+      ValueNotifier<BankNotificationEvent?>(null);
   final ValueNotifier<bool> listenerReady = ValueNotifier<bool>(false);
 
   BankNotificationService(this._firestore);
 
   static const Set<String> _bankAppHints = {
-    'com.sadad', 'sadad', 'mada', 'com.alrajhi', 'rajhi', 'com.albilad',
-    'bilyad', 'com.riyadbank', 'riyad', 'com.snbspp', 'samba',
-    'com.alahlia', 'alahli', 'com.ncb', 'ncb', 'com.arriyadh', 'riyadh',
-    'com.stcpay', 'stc pay', 'stcpay', 'apple', 'bank', 'bnp', 'hsbc',
-    'emirates', 'cib', 'meethaq', 'mobily', 'wester', 'wallet', 'pay',
+    'com.sadad',
+    'sadad',
+    'mada',
+    'com.alrajhi',
+    'rajhi',
+    'com.albilad',
+    'bilyad',
+    'com.riyadbank',
+    'riyad',
+    'com.snbspp',
+    'samba',
+    'com.alahlia',
+    'alahli',
+    'com.ncb',
+    'ncb',
+    'com.arriyadh',
+    'riyadh',
+    'com.stcpay',
+    'stc pay',
+    'stcpay',
+    'apple',
+    'bank',
+    'bnp',
+    'hsbc',
+    'emirates',
+    'cib',
+    'meethaq',
+    'mobily',
+    'wester',
+    'wallet',
+    'pay',
   };
 
   static double? parseAmount(String text) {
     final patterns = [
-      RegExp(r'(?:SAR|SR|ر\.س|ر.س|رس|﷼)\s*([0-9][0-9,]*\.?[0-9]{0,2})', caseSensitive: false),
-      RegExp(r'([0-9][0-9,]*\.?[0-9]{0,2})\s*(?:SAR|SR|ر\.س|ر.س|رس|﷼)', caseSensitive: false),
-      RegExp(r'(?:amount|مبلغ)\s*(?:of|:|-)?\s*([0-9][0-9,]*\.?[0-9]{0,2})', caseSensitive: false),
+      RegExp(
+        r'(?:SAR|SR|ر\.س|ر.س|رس|﷼)\s*([0-9][0-9,]*\.?[0-9]{0,2})',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'([0-9][0-9,]*\.?[0-9]{0,2})\s*(?:SAR|SR|ر\.س|ر.س|رس|﷼)',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'(?:amount|مبلغ)\s*(?:of|:|-)?\s*([0-9][0-9,]*\.?[0-9]{0,2})',
+        caseSensitive: false,
+      ),
     ];
     for (final re in patterns) {
       final m = re.firstMatch(text);
@@ -48,20 +89,18 @@ class BankNotificationService {
 
   Future<void> startListening() async {
     if (_sub != null) return;
+    if (kIsWeb) return;
     try {
-      _sub = _channel.receiveBroadcastStream().listen(
-        (event) {
-          if (event is! Map) return;
-          final ev = BankNotificationEvent(
-            app: event['app']?.toString() ?? '',
-            title: event['title']?.toString() ?? '',
-            text: event['text']?.toString() ?? '',
-          );
-          lastEvent.value = ev;
-          _autoVerify(ev);
-        },
-        onError: (e) => debugPrint('BANK NOTIFICATION ERROR: $e'),
-      );
+      _sub = _channel.receiveBroadcastStream().listen((event) {
+        if (event is! Map) return;
+        final ev = BankNotificationEvent(
+          app: event['app']?.toString() ?? '',
+          title: event['title']?.toString() ?? '',
+          text: event['text']?.toString() ?? '',
+        );
+        lastEvent.value = ev;
+        _autoVerify(ev);
+      }, onError: (e) => debugPrint('BANK NOTIFICATION ERROR: $e'));
       listenerReady.value = true;
     } catch (e) {
       debugPrint('BANK NOTIFICATION LISTEN FAIL: $e');
@@ -88,7 +127,9 @@ class BankNotificationService {
         if (tx.status != TransactionStatus.pending) continue;
         if ((tx.amount - amount).abs() < 0.01) {
           await _firestore.completePendingTopUp(tx);
-          debugPrint('BANK VERIFY: matched top-up ${tx.id} amount ${tx.amount}');
+          debugPrint(
+            'BANK VERIFY: matched top-up ${tx.id} amount ${tx.amount}',
+          );
           return;
         }
       }
