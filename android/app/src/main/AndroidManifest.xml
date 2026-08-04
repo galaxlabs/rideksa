@@ -21,7 +21,7 @@
         android:networkSecurityConfig="@xml/network_security_config">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCj2OCfCOyTg4mI7PA4p9rZUkX5wwqYNzo"/>
+            android:value="${googleMapsApiKey}"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"
