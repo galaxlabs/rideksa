@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_play_integrity_wrapper/flutter_play_integrity_wrapper.dart';
-import '../core/constants.dart';
+import 'app_config_service.dart';
 import 'frappe_api_client.dart';
 
 class PlayIntegrityException implements Exception {
@@ -48,7 +48,7 @@ class IntegrityService {
     }
     try {
       final token = await _wrapper.requestIntegrityToken(
-        cloudProjectNumber: AppConstants.playIntegrityCloudProjectNumber,
+        cloudProjectNumber: AppConfigService.instance.config.playIntegrityProjectNumber,
       );
       if (token == null || token.isEmpty) {
         return const IntegrityResult(passed: false, error: 'No integrity token returned');

@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../core/constants.dart';
+import 'app_config_service.dart';
 
 class PlacesService {
   final http.Client _client;
 
   PlacesService({http.Client? client}) : _client = client ?? http.Client();
+
+  String get _baseUrl => AppConfigService.instance.config.backendBaseUrl;
 
   Future<List<PlacePrediction>> autocomplete(String query,
       {double? lat, double? lng, double radius = 50000}) async {
@@ -14,7 +16,7 @@ class PlacesService {
     // Google Places REST endpoints do not allow browser CORS. Frappe keeps
     // the Google key private and returns the same normalized place contract.
     final uri = Uri.parse(
-      '${AppConstants.backendBaseUrl}/api/method/ftms.api.maps.search_ksa_places',
+      '$_baseUrl/api/method/ftms.api.maps.search_ksa_places',
     ).replace(queryParameters: {'query': query.trim(), 'limit': '8'});
 
     try {

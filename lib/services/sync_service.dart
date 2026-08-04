@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import '../models/ride_request_model.dart';
 import '../models/trip_model.dart';
 import '../models/company_model.dart';
@@ -77,7 +78,9 @@ class SyncService {
           'status': 'pending',
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('pushRideToFrappe failed: $e');
+    }
   }
 
   Future<void> pushTripToFrappe(TripModel trip) async {

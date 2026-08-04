@@ -4,8 +4,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
 import 'app.dart';
+import 'services/app_config_service.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/frappe_api_client.dart';
@@ -35,9 +35,10 @@ void main() async {
       debugPrintStack(stackTrace: stack);
       return false;
     };
+    await AppConfigService.instance.load();
     try {
       await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
+        options: AppConfigService.instance.firebaseOptions,
       );
     } catch (e) {
       debugPrint('FIREBASE INIT ERROR: $e');

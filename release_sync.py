@@ -35,7 +35,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LANDING_DIR = os.path.join(HERE, "landing")
 INDEX_HTML = os.path.join(LANDING_DIR, "index.html")
 RELEASES_JSON = os.path.join(LANDING_DIR, "releases.json")
-REMOTE_URL = "https://rideksa-landing-galaxlabs-projects.vercel.app"
+REMOTE_URL = "https://rideksa.celtcoksa.com"
 APK_NAME = "app-release.apk"
 GH_REPO = "galaxlabs/rideksa"  # must match UpdateCheckerService.githubRepo
 

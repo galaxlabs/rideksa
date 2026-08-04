@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'app_config_service.dart';
 
 class UpdateInfo {
   final String version;
@@ -22,9 +23,25 @@ class UpdateInfo {
 
 class UpdateCheckerService {
   static const String githubRepo = 'galaxlabs/rideksa';
-  static const String landingBaseUrl = 'https://rideksa-landing-galaxlabs-projects.vercel.app';
   static const String githubApiLatest = 'https://api.github.com/repos/$githubRepo/releases/latest';
-  static const String releasesJsonUrl = '$landingBaseUrl/releases.json';
+
+  String get _landingBaseUrl =>
+      AppConfigService.instance.config.updateCheckUrl.isNotEmpty
+          ? _stripPath(AppConfigService.instance.config.updateCheckUrl)
+          : 'https://rideksa.celtcoksa.com';
+
+  String get releasesJsonUrl => '$_landingBaseUrl/releases.json';
+
+  String get defaultApkUrl =>
+      AppConfigService.instance.config.apkDownloadUrl.isNotEmpty
+          ? AppConfigService.instance.config.apkDownloadUrl
+          : '$_landingBaseUrl/app-release.apk';
+
+  String _stripPath(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    return '${uri.scheme}://${uri.host}';
+  }
 
   final http.Client _client = http.Client();
 
@@ -59,7 +76,7 @@ class UpdateCheckerService {
     final version = match.group(1)!;
     final build = int.tryParse(match.group(2) ?? '') ?? _buildFromVersion(version);
 
-    String apkUrl = '$landingBaseUrl/app-release.apk';
+    String apkUrl = defaultApkUrl;
     final assets = json['assets'] as List? ?? [];
     for (final a in assets) {
       if (a is Map && (a['name'] as String? ?? '').endsWith('.apk')) {
@@ -102,7 +119,7 @@ class UpdateCheckerService {
       build: build,
       date: first['date'] as String? ?? '',
       features: features,
-      apkUrl: '$landingBaseUrl/app-release.apk',
+      apkUrl: defaultApkUrl,
     );
   }
 

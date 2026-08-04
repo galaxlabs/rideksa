@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../core/constants.dart';
 import '../core/errors.dart';
+import 'app_config_service.dart';
 import 'token_storage.dart';
 import 'http_client.dart';
 
@@ -12,11 +12,13 @@ class FrappeApiClient {
 
   FrappeApiClient({http.Client? client}) : _client = client ?? createFrappeHttpClient();
 
+  String get _baseUrl => AppConfigService.instance.config.backendBaseUrl;
+
   Uri _methodUri(String method) =>
-    Uri.parse('${AppConstants.backendBaseUrl}/api/method/$method');
+    Uri.parse('$_baseUrl/api/method/$method');
 
   Uri _resourceUri(String doctype, [String? name]) {
-    final base = '${AppConstants.backendBaseUrl}/api/resource/$doctype';
+    final base = '$_baseUrl/api/resource/$doctype';
     return Uri.parse(name != null ? '$base/$name' : base);
   }
 
@@ -157,7 +159,7 @@ class FrappeApiClient {
       body['passengers'] = passengerList;
       body['seat_count'] = passengerList.length;
     }
-    final result = await callMethod('$_apiBase.booking.create_booking', body: body, requiresSession: false);
+    final result = await callMethod('$_apiBase.booking.create_booking', body: body);
     return _messageMap(result);
   }
 
