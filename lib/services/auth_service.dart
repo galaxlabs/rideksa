@@ -15,6 +15,7 @@ class AuthService {
   final FrappeApiClient _frappe;
 
   AuthService(this._firestore, this._frappe) {
+    _frappe.sessionRefresher = ensureFrappeSession;
     _auth.authStateChanges().listen((fbUser) async {
       if (fbUser != null && _currentUser == null) {
         try {
@@ -42,10 +43,14 @@ class AuthService {
   Future<UserModel?> restoreSession() async {
     final fbUser = _auth.currentUser;
     if (fbUser != null) {
-      if (_currentUser?.uid == fbUser.uid) return _currentUser;
+      if (_currentUser?.uid == fbUser.uid) {
+        await _syncFrappeLogin(fbUser);
+        return _currentUser;
+      }
       try {
         return _completeFirebaseUser(fbUser);
-      } catch (_) {
+      } catch (e) {
+        debugPrint('SESSION RESTORE ERROR: $e');
         return null;
       }
     }

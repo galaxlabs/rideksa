@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/errors.dart';
 import '../../services/frappe_api_client.dart';
+import '../../widgets/sidebar_page.dart';
 
 class MyRidesScreen extends StatefulWidget {
   const MyRidesScreen({super.key});
@@ -152,13 +153,10 @@ class _MyRidesScreenState extends State<MyRidesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Rides'),
-        actions: [
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-        ],
-      ),
+    return SidebarPage(
+      title: 'My Rides',
+      path: '/passenger/my-rides',
+      actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh))],
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

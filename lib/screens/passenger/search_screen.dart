@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 import '../../services/places_service.dart';
 import '../../widgets/place_autocomplete_field.dart';
+import '../../widgets/sidebar_page.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -52,8 +53,10 @@ class _SearchScreenState extends State<SearchScreen> {
         return;
       }
       _suggestedRoutes = _popularRoutes.where((r) {
-        final matchFrom = from.isEmpty || r['from'].toString().toLowerCase().contains(from);
-        final matchTo = to.isEmpty || r['to'].toString().toLowerCase().contains(to);
+        final matchFrom =
+            from.isEmpty || r['from'].toString().toLowerCase().contains(from);
+        final matchTo =
+            to.isEmpty || r['to'].toString().toLowerCase().contains(to);
         return matchFrom && matchTo;
       }).toList();
       _showSuggestions = false;
@@ -74,75 +77,125 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Search Routes')),
+    return SidebarPage(
+      title: 'Search Routes',
+      path: '/passenger/search',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 12, offset: const Offset(0, 4))],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(10),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  PlaceAutocompleteField(
+                    placesService: _places,
+                    controller: _fromController,
+                    labelText: 'From (City)',
+                    prefixIcon: Icons.trip_origin,
+                    onPlaceSelected: _onFromSelected,
+                  ),
+                  const SizedBox(height: 4),
+                  const Icon(
+                    Icons.swap_vert,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  const SizedBox(height: 4),
+                  PlaceAutocompleteField(
+                    placesService: _places,
+                    controller: _toController,
+                    labelText: 'To (City)',
+                    prefixIcon: Icons.location_on,
+                    onPlaceSelected: _onToSelected,
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed:
+                          (_fromController.text.isNotEmpty &&
+                              _toController.text.isNotEmpty)
+                          ? _filterRoutes
+                          : null,
+                      child: const Text('Search Routes'),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Column(children: [
-              PlaceAutocompleteField(
-                placesService: _places,
-                controller: _fromController,
-                labelText: 'From (City)',
-                prefixIcon: Icons.trip_origin,
-                onPlaceSelected: _onFromSelected,
+            const SizedBox(height: 24),
+            if (_showSuggestions) ...[
+              Text(
+                'Popular Routes',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 4),
-              const Icon(Icons.swap_vert, color: AppColors.textSecondary, size: 20),
-              const SizedBox(height: 4),
-              PlaceAutocompleteField(
-                placesService: _places,
-                controller: _toController,
-                labelText: 'To (City)',
-                prefixIcon: Icons.location_on,
-                onPlaceSelected: _onToSelected,
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: (_fromController.text.isNotEmpty && _toController.text.isNotEmpty)
-                      ? _filterRoutes
-                      : null,
-                  child: const Text('Search Routes'),
-                ),
-              ),
-            ]),
-          ),
-          const SizedBox(height: 24),
-          if (_showSuggestions) ...[
-            Text('Popular Routes', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            ..._popularRoutes.map((r) => _PopularRouteCard(
-              route: r,
-              onTap: () => _selectRoute(r),
-            )),
-          ] else ...[
-            if (_suggestedRoutes.isEmpty)
-              Card(child: Padding(padding: const EdgeInsets.all(32), child: Center(child: Column(children: [
-                Icon(Icons.search_off, size: 48, color: AppColors.textSecondary.withAlpha(80)),
-                const SizedBox(height: 8),
-                Text('No routes found for this search', style: TextStyle(color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                Text('Try a different city name', style: TextStyle(color: AppColors.textSecondary.withAlpha(150), fontSize: 13)),
-              ]))))
-            else ...[
-              Text('Available Routes', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              ..._suggestedRoutes.map((r) => _PopularRouteCard(
-                route: r,
-                onTap: () => _selectRoute(r),
-              )),
+              ..._popularRoutes.map(
+                (r) =>
+                    _PopularRouteCard(route: r, onTap: () => _selectRoute(r)),
+              ),
+            ] else ...[
+              if (_suggestedRoutes.isEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 48,
+                            color: AppColors.textSecondary.withAlpha(80),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No routes found for this search',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Try a different city name',
+                            style: TextStyle(
+                              color: AppColors.textSecondary.withAlpha(150),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                Text(
+                  'Available Routes',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ..._suggestedRoutes.map(
+                  (r) =>
+                      _PopularRouteCard(route: r, onTap: () => _selectRoute(r)),
+                ),
+              ],
             ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -168,20 +221,55 @@ class _PopularRouteCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(children: [
-            Container(
-              width: 48, height: 48,
-              decoration: BoxDecoration(color: color.withAlpha(20), borderRadius: BorderRadius.circular(12)),
-              child: Center(child: Text(src.isNotEmpty ? src[0].toUpperCase() : 'R', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 20))),
-            ),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('$src → $dst', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              const SizedBox(height: 4),
-              Text('$km km', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-            ])),
-            Icon(Icons.chevron_right, color: AppColors.textSecondary.withAlpha(120)),
-          ]),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(20),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    src.isNotEmpty ? src[0].toUpperCase() : 'R',
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$src → $dst',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$km km',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: AppColors.textSecondary.withAlpha(120),
+              ),
+            ],
+          ),
         ),
       ),
     );

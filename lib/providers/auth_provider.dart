@@ -58,9 +58,14 @@ class AuthProvider extends ChangeNotifier {
       } else {
         _state = AuthState.authenticated;
       }
-    } catch (_) {
-      if (_user == null) _state = AuthState.unauthenticated;
-      else _state = AuthState.authenticated;
+    } catch (e) {
+      debugPrint('AUTH SESSION CHECK ERROR: $e');
+      _errorMessage = 'Your session expired. Please sign in again.';
+      if (_user == null) {
+        _state = AuthState.unauthenticated;
+      } else {
+        _state = AuthState.authenticated;
+      }
     }
     notifyListeners();
   }
@@ -102,51 +107,88 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> signUp(String email, String password, {
-    String? displayName, String purpose = 'passenger', String? partnerType,
-    String? serviceContractType, String? companyName, String? legalName,
-    String? companyNameAr, String? vatNo, String? taxId, String? crNo,
-    String? licenseNo, String? phone, String? address, String? city,
-    String? country, String? nationality, String? idDocumentType,
-    String? idNumber, String? idExpiryDate, String? licenseExpiryDate,
-    String? iqamaNo, String? iqamaExpiryDate, String? driverCardNo,
-    String? driverCardExpiryDate, String? serviceTypes,
+  Future<void> signUp(
+    String email,
+    String password, {
+    String? displayName,
+    String purpose = 'passenger',
+    String? partnerType,
+    String? serviceContractType,
+    String? companyName,
+    String? legalName,
+    String? companyNameAr,
+    String? vatNo,
+    String? taxId,
+    String? crNo,
+    String? licenseNo,
+    String? phone,
+    String? address,
+    String? city,
+    String? country,
+    String? nationality,
+    String? idDocumentType,
+    String? idNumber,
+    String? idExpiryDate,
+    String? licenseExpiryDate,
+    String? iqamaNo,
+    String? iqamaExpiryDate,
+    String? driverCardNo,
+    String? driverCardExpiryDate,
+    String? serviceTypes,
   }) async {
     _state = AuthState.loading;
     _errorMessage = null;
     notifyListeners();
     try {
-      _user = await _authService.signUpWithEmail(email, password, displayName: displayName);
+      _user = await _authService.signUpWithEmail(
+        email,
+        password,
+        displayName: displayName,
+      );
       try {
-		await _authService.ensureFrappeSession();
+        await _authService.ensureFrappeSession();
         await _authService.completeOnboarding(
           purpose: purpose,
           partnerType: partnerType,
           serviceContractType: serviceContractType,
           companyName: companyName,
-          legalName: legalName, companyNameAr: companyNameAr, vatNo: vatNo,
-          taxId: taxId, crNo: crNo, licenseNo: licenseNo, phone: phone,
-          address: address, city: city, country: country, nationality: nationality,
-          idDocumentType: idDocumentType, idNumber: idNumber,
-          idExpiryDate: idExpiryDate, licenseExpiryDate: licenseExpiryDate,
-          iqamaNo: iqamaNo, iqamaExpiryDate: iqamaExpiryDate,
-          driverCardNo: driverCardNo, driverCardExpiryDate: driverCardExpiryDate,
+          legalName: legalName,
+          companyNameAr: companyNameAr,
+          vatNo: vatNo,
+          taxId: taxId,
+          crNo: crNo,
+          licenseNo: licenseNo,
+          phone: phone,
+          address: address,
+          city: city,
+          country: country,
+          nationality: nationality,
+          idDocumentType: idDocumentType,
+          idNumber: idNumber,
+          idExpiryDate: idExpiryDate,
+          licenseExpiryDate: licenseExpiryDate,
+          iqamaNo: iqamaNo,
+          iqamaExpiryDate: iqamaExpiryDate,
+          driverCardNo: driverCardNo,
+          driverCardExpiryDate: driverCardExpiryDate,
           serviceTypes: serviceTypes,
           fullName: displayName ?? email,
         );
       } catch (e) {
         debugPrint('Frappe onboarding sync failed: $e');
-		throw AuthException('Account was created, but the Frappe profile could not be linked. Please retry.');
+        throw AuthException(
+          'Account was created, but the Frappe profile could not be linked. Please retry.',
+        );
       }
       final selectedRole = purpose == 'captain'
           ? UserRole.driver
           : purpose == 'customer_company'
-              ? UserRole.customerCompany
-              : purpose == 'partner_company' && partnerType == 'Travel Agent'
-              ? UserRole.travelAgent
-              : purpose == 'partner_company'
-                  ? UserRole.partnerCompany
-                  : UserRole.passenger;
+          ? UserRole.customerCompany
+          : purpose == 'partner_company' && partnerType == 'Travel Agent'
+          ? UserRole.travelAgent
+          : purpose == 'partner_company'
+          ? UserRole.partnerCompany
+          : UserRole.passenger;
       await updateRole(selectedRole);
       await updateProfile(
         displayName: displayName ?? _user?.displayName,

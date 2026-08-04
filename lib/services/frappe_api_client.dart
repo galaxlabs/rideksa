@@ -9,6 +9,7 @@ class FrappeApiClient {
   final http.Client _client;
   final TokenStorage _storage = createTokenStorage();
   String? _cookie;
+  Future<void> Function()? sessionRefresher;
 
   FrappeApiClient({http.Client? client})
     : _client = client ?? createFrappeHttpClient();
@@ -114,9 +115,19 @@ class FrappeApiClient {
     };
     if (_cookie != null) headers['Cookie'] = _cookie!;
 
-    final response = body != null
-        ? await _client.post(uri, headers: headers, body: jsonEncode(body))
-        : await _client.get(uri, headers: headers);
+    Future<http.Response> send() => body != null
+        ? _client.post(uri, headers: headers, body: jsonEncode(body))
+        : _client.get(uri, headers: headers);
+
+    var response = await send();
+    if (requiresSession &&
+        (response.statusCode == 401 || response.statusCode == 403) &&
+        sessionRefresher != null) {
+      await sessionRefresher!();
+      await _restoreSession();
+      if (_cookie != null) headers['Cookie'] = _cookie!;
+      response = await send();
+    }
 
     final decoded = _decode(response);
     if (response.statusCode >= 400) {

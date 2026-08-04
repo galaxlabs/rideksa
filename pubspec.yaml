@@ -1,7 +1,7 @@
 name: rideksa
 description: "RideKSA - Ride Hailing & Fleet Management App for Saudi Arabia"
 publish_to: 'none'
-version: 0.0.10+13
+version: 0.0.11+14
 
 environment:
   sdk: ^3.11.5
