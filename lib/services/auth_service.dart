@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import '../core/errors.dart';
@@ -87,7 +88,11 @@ class AuthService {
 
   Future<UserModel> signInWithPhone(String phone) async {
     final verificationId = await _verifyPhone(phone);
-    _currentUser = UserModel(uid: 'pending', phone: phone, role: UserRole.passenger);
+    _currentUser = UserModel(
+      uid: 'pending',
+      phone: phone,
+      role: UserRole.passenger,
+    );
     return _currentUser!;
   }
 
@@ -107,15 +112,22 @@ class AuthService {
     }
   }
 
-  Future<UserModel> signUpWithEmail(String email, String password, {String? displayName}) async {
+  Future<UserModel> signUpWithEmail(
+    String email,
+    String password, {
+    String? displayName,
+  }) async {
     try {
       final result = await _auth.createUserWithEmailAndPassword(
-        email: email, password: password,
+        email: email,
+        password: password,
       );
       final fbUser = result.user;
       if (fbUser == null) throw const AuthException('Sign up failed');
       if (displayName != null) {
-        try { await fbUser.updateDisplayName(displayName); } catch (_) {}
+        try {
+          await fbUser.updateDisplayName(displayName);
+        } catch (_) {}
       }
       return _completeFirebaseUser(fbUser);
     } on fb.FirebaseAuthException catch (e) {
@@ -126,7 +138,8 @@ class AuthService {
   Future<UserModel> signInWithEmail(String email, String password) async {
     try {
       final result = await _auth.signInWithEmailAndPassword(
-        email: email, password: password,
+        email: email,
+        password: password,
       );
       final fbUser = result.user;
       if (fbUser == null) throw const AuthException('Login failed');
@@ -139,7 +152,11 @@ class AuthService {
     }
   }
 
-  Future<UserModel> _completeFirebaseUserWithData({required String uid, required String email, String displayName = ''}) async {
+  Future<UserModel> _completeFirebaseUserWithData({
+    required String uid,
+    required String email,
+    String displayName = '',
+  }) async {
     UserModel? userDoc;
     try {
       userDoc = await _firestore.getUser(uid);
@@ -147,26 +164,54 @@ class AuthService {
       userDoc = null;
     }
     String? deviceId;
-    try { deviceId = await _getOrCreateDeviceId(); } catch (_) { deviceId = 'unknown'; }
-    if (userDoc == null) {
-      userDoc = UserModel(uid: uid, email: email, displayName: displayName,
-        role: UserRole.passenger, lastLogin: DateTime.now(),
-        lastDeviceId: deviceId, lastDeviceLabel: _deviceLabel(), loginCount: 1);
-      try { await _firestore.setUser(userDoc); } catch (_) {}
-    } else {
-      userDoc = UserModel(uid: userDoc.uid, phone: userDoc.phone,
-        email: userDoc.email?.isNotEmpty == true ? userDoc.email : email,
-        displayName: userDoc.displayName?.isNotEmpty == true ? userDoc.displayName : displayName,
-        role: userDoc.role, companyId: userDoc.companyId,
-        isActive: userDoc.isActive, createdAt: userDoc.createdAt,
-        lastLogin: DateTime.now(), frappeUserId: userDoc.frappeUserId,
-        fcmToken: userDoc.fcmToken, nationality: userDoc.nationality,
-        documentType: userDoc.documentType, documentNo: userDoc.documentNo,
-        lastDeviceId: deviceId, lastDeviceLabel: _deviceLabel(),
-        loginCount: userDoc.loginCount + 1);
-      try { await _firestore.setUser(userDoc); } catch (_) {}
+    try {
+      deviceId = await _getOrCreateDeviceId();
+    } catch (_) {
+      deviceId = 'unknown';
     }
-    try { await _storage.write(key: 'auth_token', value: uid); } catch (_) {}
+    if (userDoc == null) {
+      userDoc = UserModel(
+        uid: uid,
+        email: email,
+        displayName: displayName,
+        role: UserRole.passenger,
+        lastLogin: DateTime.now(),
+        lastDeviceId: deviceId,
+        lastDeviceLabel: _deviceLabel(),
+        loginCount: 1,
+      );
+      try {
+        await _firestore.setUser(userDoc);
+      } catch (_) {}
+    } else {
+      userDoc = UserModel(
+        uid: userDoc.uid,
+        phone: userDoc.phone,
+        email: userDoc.email?.isNotEmpty == true ? userDoc.email : email,
+        displayName: userDoc.displayName?.isNotEmpty == true
+            ? userDoc.displayName
+            : displayName,
+        role: userDoc.role,
+        companyId: userDoc.companyId,
+        isActive: userDoc.isActive,
+        createdAt: userDoc.createdAt,
+        lastLogin: DateTime.now(),
+        frappeUserId: userDoc.frappeUserId,
+        fcmToken: userDoc.fcmToken,
+        nationality: userDoc.nationality,
+        documentType: userDoc.documentType,
+        documentNo: userDoc.documentNo,
+        lastDeviceId: deviceId,
+        lastDeviceLabel: _deviceLabel(),
+        loginCount: userDoc.loginCount + 1,
+      );
+      try {
+        await _firestore.setUser(userDoc);
+      } catch (_) {}
+    }
+    try {
+      await _storage.write(key: 'auth_token', value: uid);
+    } catch (_) {}
     _currentUser = userDoc;
     return userDoc;
   }
@@ -174,16 +219,23 @@ class AuthService {
   Future<UserModel> signInWithGoogle() async {
     try {
       final result = await signInWithGoogleProvider(_auth);
-      return _completeFirebaseSignIn(result, fallbackMessage: 'Google sign-in failed');
+      return _completeFirebaseSignIn(
+        result,
+        fallbackMessage: 'Google sign-in failed',
+      );
     } on fb.FirebaseAuthException catch (e) {
       if (e.code == 'redirect-started') {
         throw const AuthException('Redirecting to Google sign-in...');
       }
       if (e.code == 'operation-not-allowed') {
-        throw const AuthException('Google sign-in not enabled in Firebase Console.');
+        throw const AuthException(
+          'Google sign-in not enabled in Firebase Console.',
+        );
       }
       if (e.code == 'unauthorized-domain') {
-        throw const AuthException('Add this domain to Firebase Auth authorized domains.');
+        throw const AuthException(
+          'Add this domain to Firebase Auth authorized domains.',
+        );
       }
       if (e.code == 'popup-blocked') {
         throw const AuthException('Browser blocked the Google sign-in popup.');
@@ -192,7 +244,10 @@ class AuthService {
     }
   }
 
-  Future<UserModel> _completeFirebaseSignIn(fb.UserCredential result, {required String fallbackMessage}) async {
+  Future<UserModel> _completeFirebaseSignIn(
+    fb.UserCredential result, {
+    required String fallbackMessage,
+  }) async {
     final fbUser = result.user;
     if (fbUser == null) throw AuthException(fallbackMessage);
     return _completeFirebaseUser(fbUser);
@@ -220,38 +275,55 @@ class AuthService {
 
       if (userDoc == null) {
         userDoc = UserModel(
-          uid: uid, email: email, displayName: displayName,
+          uid: uid,
+          email: email,
+          displayName: displayName,
           role: UserRole.passenger,
           lastLogin: DateTime.now(),
           lastDeviceId: deviceId,
           lastDeviceLabel: _deviceLabel(),
           loginCount: 1,
         );
-        try { await _firestore.setUser(userDoc); } catch (_) {}
+        try {
+          await _firestore.setUser(userDoc);
+        } catch (_) {}
       } else {
         userDoc = UserModel(
-          uid: userDoc.uid, phone: userDoc.phone,
+          uid: userDoc.uid,
+          phone: userDoc.phone,
           email: userDoc.email?.isNotEmpty == true ? userDoc.email : email,
-          displayName: userDoc.displayName?.isNotEmpty == true ? userDoc.displayName : displayName,
-          role: userDoc.role, companyId: userDoc.companyId,
-          isActive: userDoc.isActive, createdAt: userDoc.createdAt,
+          displayName: userDoc.displayName?.isNotEmpty == true
+              ? userDoc.displayName
+              : displayName,
+          role: userDoc.role,
+          companyId: userDoc.companyId,
+          isActive: userDoc.isActive,
+          createdAt: userDoc.createdAt,
           lastLogin: DateTime.now(),
-          frappeUserId: userDoc.frappeUserId, fcmToken: userDoc.fcmToken,
-          nationality: userDoc.nationality, documentType: userDoc.documentType,
+          frappeUserId: userDoc.frappeUserId,
+          fcmToken: userDoc.fcmToken,
+          nationality: userDoc.nationality,
+          documentType: userDoc.documentType,
           documentNo: userDoc.documentNo,
           lastDeviceId: deviceId,
           lastDeviceLabel: _deviceLabel(),
           loginCount: userDoc.loginCount + 1,
         );
-        try { await _firestore.setUser(userDoc); } catch (_) {}
+        try {
+          await _firestore.setUser(userDoc);
+        } catch (_) {}
       }
 
-      try { await _storage.write(key: 'auth_token', value: uid); } catch (_) {}
-       await _syncFrappeLogin(fbUser);
+      try {
+        await _storage.write(key: 'auth_token', value: uid);
+      } catch (_) {}
+      await _syncFrappeLogin(fbUser);
       _currentUser = userDoc;
       return userDoc;
     } catch (e) {
-      throw AuthException('Login successful but failed to load profile: ${e.toString()}');
+      throw AuthException(
+        'Login successful but failed to load profile: ${e.toString()}',
+      );
     }
   }
 
@@ -265,7 +337,8 @@ class AuthService {
 
   Future<void> ensureFrappeSession() async {
     final fbUser = _auth.currentUser;
-    if (fbUser == null) throw const AuthException('Firebase login is required.');
+    if (fbUser == null)
+      throw const AuthException('Firebase login is required.');
     await _syncFrappeLogin(fbUser);
   }
 
@@ -274,12 +347,26 @@ class AuthService {
     String? partnerType,
     String? serviceContractType,
     String? companyName,
-    String? legalName, String? companyNameAr, String? vatNo, String? taxId,
-    String? crNo, String? licenseNo, String? phone, String? address,
-    String? city, String? country, String? nationality, String? idDocumentType,
-    String? idNumber, String? idExpiryDate, String? licenseExpiryDate,
-    String? iqamaNo, String? iqamaExpiryDate, String? driverCardNo,
-    String? driverCardExpiryDate, String? serviceTypes,
+    String? legalName,
+    String? companyNameAr,
+    String? vatNo,
+    String? taxId,
+    String? crNo,
+    String? licenseNo,
+    String? phone,
+    String? address,
+    String? city,
+    String? country,
+    String? nationality,
+    String? idDocumentType,
+    String? idNumber,
+    String? idExpiryDate,
+    String? licenseExpiryDate,
+    String? iqamaNo,
+    String? iqamaExpiryDate,
+    String? driverCardNo,
+    String? driverCardExpiryDate,
+    String? serviceTypes,
     required String fullName,
   }) {
     return _frappe.completeOnboarding(
@@ -287,13 +374,25 @@ class AuthService {
       partnerType: partnerType,
       serviceContractType: serviceContractType,
       companyName: companyName,
-      legalName: legalName, companyNameAr: companyNameAr, vatNo: vatNo,
-      taxId: taxId, crNo: crNo, licenseNo: licenseNo, phone: phone,
-      address: address, city: city, country: country, nationality: nationality,
-      idDocumentType: idDocumentType, idNumber: idNumber,
-      idExpiryDate: idExpiryDate, licenseExpiryDate: licenseExpiryDate,
-      iqamaNo: iqamaNo, iqamaExpiryDate: iqamaExpiryDate,
-      driverCardNo: driverCardNo, driverCardExpiryDate: driverCardExpiryDate,
+      legalName: legalName,
+      companyNameAr: companyNameAr,
+      vatNo: vatNo,
+      taxId: taxId,
+      crNo: crNo,
+      licenseNo: licenseNo,
+      phone: phone,
+      address: address,
+      city: city,
+      country: country,
+      nationality: nationality,
+      idDocumentType: idDocumentType,
+      idNumber: idNumber,
+      idExpiryDate: idExpiryDate,
+      licenseExpiryDate: licenseExpiryDate,
+      iqamaNo: iqamaNo,
+      iqamaExpiryDate: iqamaExpiryDate,
+      driverCardNo: driverCardNo,
+      driverCardExpiryDate: driverCardExpiryDate,
       serviceTypes: serviceTypes,
       fullName: fullName,
     );
@@ -364,33 +463,53 @@ class AuthService {
   }
 
   Future<String> _verifyPhone(String phone) async {
-    String? verificationId;
+    final completer = Completer<String>();
     await _auth.verifyPhoneNumber(
       phoneNumber: phone,
       verificationCompleted: (_) {},
-      verificationFailed: (e) => throw AuthException(e.message ?? 'Phone verification failed'),
-      codeSent: (vid, _) => verificationId = vid,
-      codeAutoRetrievalTimeout: (_) {},
+      verificationFailed: (e) {
+        if (!completer.isCompleted) {
+          completer.completeError(
+            AuthException(e.message ?? 'Phone verification failed'),
+          );
+        }
+      },
+      codeSent: (vid, _) {
+        if (!completer.isCompleted) completer.complete(vid);
+      },
+      codeAutoRetrievalTimeout: (_) {
+        if (!completer.isCompleted) {
+          completer.completeError(
+            const AuthException('OTP request timed out. Try again.'),
+          );
+        }
+      },
       timeout: const Duration(seconds: 60),
     );
-    while (verificationId == null) {
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
-    return verificationId!;
+    return completer.future;
   }
 
   String _friendlyAuthError(fb.FirebaseAuthException e) {
     switch (e.code) {
-      case 'email-already-in-use': return 'This email is already registered. Try logging in.';
-      case 'invalid-email': return 'Invalid email address.';
-      case 'weak-password': return 'Password should be at least 6 characters.';
-      case 'user-not-found': return 'No account found with this email.';
-      case 'wrong-password': return 'Incorrect password.';
+      case 'email-already-in-use':
+        return 'This email is already registered. Try logging in.';
+      case 'invalid-email':
+        return 'Invalid email address.';
+      case 'weak-password':
+        return 'Password should be at least 6 characters.';
+      case 'user-not-found':
+        return 'No account found with this email.';
+      case 'wrong-password':
+        return 'Incorrect password.';
       case 'invalid-credential':
-      case 'invalid-login-credentials': return 'Email or password is incorrect.';
-      case 'too-many-requests': return 'Too many attempts. Please try again later.';
-      case 'operation-not-allowed': return 'Email/Password sign-in is not enabled.';
-      default: return e.message ?? 'Authentication failed.';
+      case 'invalid-login-credentials':
+        return 'Email or password is incorrect.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      case 'operation-not-allowed':
+        return 'Email/Password sign-in is not enabled.';
+      default:
+        return e.message ?? 'Authentication failed.';
     }
   }
 }

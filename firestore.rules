@@ -1,21 +1,120 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Authenticated app users may read/write the realtime cache.
-    // Frappe remains the authoritative system of record.
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Users may always read/write their own profile.
-    match /users/{uid} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && (request.auth.uid == uid);
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Shared realtime cache collections used across all roles.
+    function ownsExisting(field) {
+      return isSignedIn() && resource.data[field] == request.auth.uid;
+    }
+
+    function ownsIncoming(field) {
+      return isSignedIn() && request.resource.data[field] == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    match /wallets/{walletId} {
+      allow read: if ownsExisting('user_id');
+      allow create, update: if ownsIncoming('user_id');
+      allow delete: if false;
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if ownsExisting('user_id');
+      allow create: if ownsIncoming('user_id');
+      allow update: if ownsExisting('user_id') && ownsIncoming('user_id');
+      allow delete: if false;
+    }
+
+    match /active_rides/{rideId} {
+      allow read: if isSignedIn();
+      allow create: if ownsIncoming('passenger_id');
+      allow update: if ownsExisting('passenger_id') || ownsExisting('assigned_driver_id') || ownsIncoming('assigned_driver_id');
+      allow delete: if ownsExisting('passenger_id');
+    }
+
+    match /active_offers/{offerId} {
+      allow read: if isSignedIn();
+      allow create: if ownsIncoming('driver_id');
+      allow update, delete: if ownsExisting('driver_id');
+    }
+
+    match /active_trips/{tripId} {
+      allow read: if isSignedIn();
+      allow create: if ownsIncoming('passenger_id') || ownsIncoming('driver_id');
+      allow update: if ownsExisting('passenger_id') || ownsExisting('driver_id') || ownsIncoming('driver_id');
+      allow delete: if false;
+    }
+
+    match /chat_messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if ownsIncoming('sender_id');
+      allow update, delete: if false;
+    }
+
+    match /drivers/{driverId} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(driverId);
+      allow delete: if false;
+    }
+
+    match /contracts/{contractId} {
+      allow read: if isSignedIn();
+      allow create, update: if ownsIncoming('owner_id');
+      allow delete: if ownsExisting('owner_id');
+    }
+
+    match /group_invites/{inviteId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /group_members/{memberId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /trip_transfers/{transferId} {
+      allow read: if isSignedIn();
+      allow create, update: if ownsIncoming('seller_id') || ownsIncoming('buyer_id');
+      allow delete: if false;
+    }
+
+    match /companies/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /routes/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /vehicles/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /commissions/{docId} {
+      allow read: if isSignedIn() && resource.data.company_id != null;
+      allow write: if false;
+    }
+
+    match /subscriptions/{docId} {
+      allow read: if isSignedIn() && resource.data.company_id != null;
+      allow write: if false;
+    }
+
     match /{document=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if false;
     }
   }
 }
