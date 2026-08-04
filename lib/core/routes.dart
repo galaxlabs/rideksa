@@ -50,6 +50,7 @@ GoRouter createRouter(AuthProvider auth) {
       final onAuthPage = location.startsWith('/auth');
       final publicInvite = location.startsWith('/join/');
       if (publicInvite) return null;
+      if (location == '/auth/role-select') return '/auth/login';
       if (!loggedIn && !onAuthPage) return '/auth/login';
       if (loggedIn && onAuthPage) {
         final role = auth.user?.role;

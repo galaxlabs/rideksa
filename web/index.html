@@ -31,6 +31,16 @@
 
   <title>RideKSA - Rides &amp; Transport</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    (function () {
+      var canonicalHost = 'rideksa-web.celtcoksa.com';
+      if (window.location.hostname !== 'rideksa-84949.web.app') return;
+      if (window.location.pathname.indexOf('/__/auth/handler') === 0) return;
+      var hash = window.location.hash || '#/auth/login';
+      if (hash.indexOf('#/auth/role-select') === 0) hash = '#/auth/login';
+      window.location.replace('https://' + canonicalHost + window.location.pathname + window.location.search + hash);
+    })();
+  </script>
 </head>
 <body>
   <!--
