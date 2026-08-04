@@ -1,7 +1,7 @@
 class AppConstants {
   static const String appName = 'RideKSA';
-  static const String appVersion = '0.0.11';
-  static const int appBuildNumber = 14;
+  static const String appVersion = '0.0.12';
+  static const int appBuildNumber = 15;
   static const String backendBaseUrl = 'https://ftms.galaxylabs.online';
   static const String defaultCurrency = 'SAR';
   static const double defaultVatRate = 15.0;

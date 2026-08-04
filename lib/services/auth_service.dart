@@ -16,6 +16,11 @@ class AuthService {
 
   AuthService(this._firestore, this._frappe) {
     _frappe.sessionRefresher = ensureFrappeSession;
+    _frappe.firebaseTokenProvider = (forceRefresh) async {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+      return user.getIdToken(forceRefresh);
+    };
     _auth.authStateChanges().listen((fbUser) async {
       if (fbUser != null && _currentUser == null) {
         try {

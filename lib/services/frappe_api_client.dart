@@ -10,6 +10,7 @@ class FrappeApiClient {
   final TokenStorage _storage = createTokenStorage();
   String? _cookie;
   Future<void> Function()? sessionRefresher;
+  Future<String?> Function(bool forceRefresh)? firebaseTokenProvider;
 
   FrappeApiClient({http.Client? client})
     : _client = client ?? createFrappeHttpClient();
@@ -30,6 +31,16 @@ class FrappeApiClient {
 
   Future<void> _restoreSession() async {
     _cookie = await _storage.read(key: 'frappe_session');
+  }
+
+  Future<void> _addFirebaseAuth(
+    Map<String, String> headers, {
+    bool forceRefresh = false,
+  }) async {
+    final token = await firebaseTokenProvider?.call(forceRefresh);
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
   }
 
   Future<bool> get hasSession async {
@@ -114,6 +125,7 @@ class FrappeApiClient {
       'Accept': 'application/json',
     };
     if (_cookie != null) headers['Cookie'] = _cookie!;
+    if (requiresSession) await _addFirebaseAuth(headers);
 
     Future<http.Response> send() => body != null
         ? _client.post(uri, headers: headers, body: jsonEncode(body))
@@ -126,6 +138,7 @@ class FrappeApiClient {
       await sessionRefresher!();
       await _restoreSession();
       if (_cookie != null) headers['Cookie'] = _cookie!;
+      await _addFirebaseAuth(headers, forceRefresh: true);
       response = await send();
     }
 
@@ -154,6 +167,7 @@ class FrappeApiClient {
     final uri = _resourceUri(doctype).replace(queryParameters: params);
     final headers = <String, String>{'Accept': 'application/json'};
     if (_cookie != null) headers['Cookie'] = _cookie!;
+    await _addFirebaseAuth(headers);
     final response = await _client.get(uri, headers: headers);
     final data = _decode(response);
     if (response.statusCode >= 400)
@@ -166,6 +180,7 @@ class FrappeApiClient {
     final uri = _resourceUri(doctype, name);
     final headers = <String, String>{'Accept': 'application/json'};
     if (_cookie != null) headers['Cookie'] = _cookie!;
+    await _addFirebaseAuth(headers);
     final response = await _client.get(uri, headers: headers);
     final data = _decode(response);
     if (response.statusCode >= 400)
@@ -184,6 +199,7 @@ class FrappeApiClient {
       'Accept': 'application/json',
     };
     if (_cookie != null) headers['Cookie'] = _cookie!;
+    await _addFirebaseAuth(headers);
     final response = await _client.post(
       uri,
       headers: headers,
