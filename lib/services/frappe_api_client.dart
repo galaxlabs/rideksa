@@ -17,6 +17,11 @@ class FrappeApiClient {
 
   Uri _methodUri(String method) => Uri.parse('$_baseUrl/api/method/$method');
 
+  Map<String, String>? _queryParameters(Map<String, dynamic>? query) {
+    if (query == null || query.isEmpty) return null;
+    return query.map((key, value) => MapEntry(key, value?.toString() ?? ''));
+  }
+
   Uri _resourceUri(String doctype, [String? name]) {
     final base = '$_baseUrl/api/resource/$doctype';
     return Uri.parse(name != null ? '$base/$name' : base);
@@ -100,7 +105,9 @@ class FrappeApiClient {
     bool requiresSession = true,
   }) async {
     if (requiresSession) await _restoreSession();
-    final uri = _methodUri(method).replace(queryParameters: query);
+    final uri = _methodUri(
+      method,
+    ).replace(queryParameters: _queryParameters(query));
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -128,9 +135,9 @@ class FrappeApiClient {
     int limit = 50,
   }) async {
     await _restoreSession();
-    final params = <String, dynamic>{
+    final params = <String, String>{
       'fields': jsonEncode(fields ?? ['*']),
-      'limit_page_length': limit,
+      'limit_page_length': limit.toString(),
     };
     if (filters != null) params['filters'] = jsonEncode(filters);
     final uri = _resourceUri(doctype).replace(queryParameters: params);
