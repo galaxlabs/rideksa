@@ -96,15 +96,7 @@ class AuthService {
     return false;
   }
 
-  Future<UserModel> signInWithPhone(String phone) async {
-    final verificationId = await _verifyPhone(phone);
-    _currentUser = UserModel(
-      uid: 'pending',
-      phone: phone,
-      role: UserRole.passenger,
-    );
-    return _currentUser!;
-  }
+  Future<String> signInWithPhone(String phone) => _verifyPhone(phone);
 
   Future<UserModel> verifyOTP(String verificationId, String smsCode) async {
     try {
@@ -128,10 +120,12 @@ class AuthService {
     String? displayName,
   }) async {
     try {
-      final result = await _auth.createUserWithEmailAndPassword(
+      final customToken = await _frappe.registerAndGetFirebaseCustomToken(
         email: email,
         password: password,
+        displayName: displayName,
       );
+      final result = await _auth.signInWithCustomToken(customToken);
       final fbUser = result.user;
       if (fbUser == null) throw const AuthException('Sign up failed');
       if (displayName != null) {
@@ -142,24 +136,33 @@ class AuthService {
       return _completeFirebaseUser(fbUser);
     } on fb.FirebaseAuthException catch (e) {
       throw AuthException(_friendlyAuthError(e));
+    } on ApiException catch (e) {
+      throw AuthException(e.message);
     }
   }
 
   Future<UserModel> signInWithEmail(String email, String password) async {
     try {
-      final result = await _auth.signInWithEmailAndPassword(
+      final customToken = await _frappe.getFirebaseCustomToken(
         email: email,
         password: password,
       );
+      final result = await _auth.signInWithCustomToken(customToken);
       final fbUser = result.user;
       if (fbUser == null) throw const AuthException('Login failed');
       return _completeFirebaseUser(fbUser);
     } on fb.FirebaseAuthException catch (e) {
       throw AuthException(_friendlyAuthError(e));
+    } on ApiException catch (e) {
+      throw AuthException(e.message);
     } catch (e, stack) {
       debugPrint('EMAIL SIGNIN ERROR: $e $stack');
       throw AuthException(e.toString());
     }
+  }
+
+  Future<void> requestPasswordReset(String email) {
+    return _frappe.requestFrappePasswordReset(email);
   }
 
   Future<UserModel> _completeFirebaseUserWithData({
@@ -467,9 +470,16 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _auth.signOut();
-    await _storage.delete(key: 'auth_token');
-    _currentUser = null;
+    try {
+      await _frappe.logout();
+    } finally {
+      try {
+        await _auth.signOut();
+      } finally {
+        await _storage.delete(key: 'auth_token');
+        _currentUser = null;
+      }
+    }
   }
 
   Future<String> _verifyPhone(String phone) async {

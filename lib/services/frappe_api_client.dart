@@ -102,12 +102,64 @@ class FrappeApiClient {
     }
   }
 
+  Future<String> getFirebaseCustomToken({
+    required String email,
+    required String password,
+  }) async {
+    final result = _messageMap(
+      await callMethod(
+        'ftms.api.auth.firebase_token_from_frappe_password',
+        body: {'email': email, 'password': password},
+        requiresSession: false,
+      ),
+    );
+    final token = result['custom_token']?.toString();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('The login server did not return a token.');
+    }
+    return token;
+  }
+
+  Future<String> registerAndGetFirebaseCustomToken({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
+    final result = _messageMap(
+      await callMethod(
+        'ftms.api.auth.register_with_frappe_password',
+        body: {
+          'email': email,
+          'password': password,
+          'display_name': displayName,
+        },
+        requiresSession: false,
+      ),
+    );
+    final token = result['custom_token']?.toString();
+    if (token == null || token.isEmpty) {
+      throw const ApiException(
+        'The registration server did not return a token.',
+      );
+    }
+    return token;
+  }
+
+  Future<void> requestFrappePasswordReset(String email) async {
+    await callMethod(
+      'ftms.api.auth.request_frappe_password_reset',
+      body: {'email': email},
+      requiresSession: false,
+    );
+  }
+
   Future<void> logout() async {
     try {
       await callMethod('logout');
     } catch (_) {}
     _cookie = null;
     await _storage.delete(key: 'frappe_session');
+    await _storage.delete(key: 'frappe_api_token');
   }
 
   Future<dynamic> callMethod(
@@ -145,7 +197,8 @@ class FrappeApiClient {
     final decoded = _decode(response);
     if (response.statusCode >= 400) {
       throw ApiException(
-        decoded['_server_messages']?.toString() ??
+        decoded['message']?.toString() ??
+            decoded['_server_messages']?.toString() ??
             'HTTP ${response.statusCode}',
       );
     }

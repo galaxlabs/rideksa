@@ -76,8 +76,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _pendingPhone = phone;
-      final user = await _authService.signInWithPhone(phone);
-      _verificationId = _authService.currentUser?.uid;
+      _verificationId = await _authService.signInWithPhone(phone);
       _state = AuthState.initial;
     } on AppException catch (e) {
       _errorMessage = e.message;
@@ -248,6 +247,10 @@ class AuthProvider extends ChangeNotifier {
       _state = AuthState.error;
     }
     notifyListeners();
+  }
+
+  Future<void> requestPasswordReset(String email) {
+    return _authService.requestPasswordReset(email);
   }
 
   Future<void> selectPurpose(UserRole role) async {
