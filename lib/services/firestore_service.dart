@@ -22,66 +22,91 @@ class FirestoreService {
 
   // ─── Users ───
   Future<UserModel?> getUser(String uid) async {
-    final doc = await _db.collection(AppConstants.firestoreUsers).doc(uid).get();
+    final doc = await _db
+        .collection(AppConstants.firestoreUsers)
+        .doc(uid)
+        .get();
     return doc.exists ? UserModel.fromJson(doc.data()!) : null;
   }
 
-  Future<void> setUser(UserModel user) =>
-      _db.collection(AppConstants.firestoreUsers).doc(user.uid).set(user.toJson());
+  Future<void> setUser(UserModel user) => _db
+      .collection(AppConstants.firestoreUsers)
+      .doc(user.uid)
+      .set(user.toJson());
 
   Future<void> updateUser(String uid, Map<String, dynamic> data) =>
       _db.collection(AppConstants.firestoreUsers).doc(uid).update(data);
 
-  Stream<UserModel?> streamUser(String uid) =>
-      _db.collection(AppConstants.firestoreUsers).doc(uid).snapshots().map(
-        (s) => s.exists ? UserModel.fromJson(s.data()!) : null,
-      );
+  Stream<UserModel?> streamUser(String uid) => _db
+      .collection(AppConstants.firestoreUsers)
+      .doc(uid)
+      .snapshots()
+      .map((s) => s.exists ? UserModel.fromJson(s.data()!) : null);
 
   // ─── Drivers ───
   Future<DriverModel?> getDriver(String id) async {
-    final doc = await _db.collection(AppConstants.firestoreDrivers).doc(id).get();
+    final doc = await _db
+        .collection(AppConstants.firestoreDrivers)
+        .doc(id)
+        .get();
     return doc.exists ? DriverModel.fromJson(doc.data()!) : null;
   }
 
-  Future<void> setDriver(DriverModel driver) =>
-      _db.collection(AppConstants.firestoreDrivers).doc(driver.id).set(driver.toJson());
+  Future<void> setDriver(DriverModel driver) => _db
+      .collection(AppConstants.firestoreDrivers)
+      .doc(driver.id)
+      .set(driver.toJson());
 
-  Stream<DriverModel?> streamDriver(String id) =>
-      _db.collection(AppConstants.firestoreDrivers).doc(id).snapshots().map(
-        (s) => s.exists ? DriverModel.fromJson(s.data()!) : null,
-      );
+  Stream<DriverModel?> streamDriver(String id) => _db
+      .collection(AppConstants.firestoreDrivers)
+      .doc(id)
+      .snapshots()
+      .map((s) => s.exists ? DriverModel.fromJson(s.data()!) : null);
 
-  Stream<List<DriverModel>> streamAvailableDrivers(String companyId) =>
-      _db.collection(AppConstants.firestoreDrivers)
-          .where('company_id', isEqualTo: companyId)
-          .where('is_available', isEqualTo: true)
-          .snapshots()
-          .map((s) => s.docs.map((d) => DriverModel.fromJson(d.data())).toList());
+  Stream<List<DriverModel>> streamAvailableDrivers(String companyId) => _db
+      .collection(AppConstants.firestoreDrivers)
+      .where('company_id', isEqualTo: companyId)
+      .where('is_available', isEqualTo: true)
+      .snapshots()
+      .map((s) => s.docs.map((d) => DriverModel.fromJson(d.data())).toList());
 
   Future<List<DriverModel>> getDriversByCompany(String companyId) async {
-    final snap = await _db.collection(AppConstants.firestoreDrivers)
-        .where('company_id', isEqualTo: companyId).get();
+    final snap = await _db
+        .collection(AppConstants.firestoreDrivers)
+        .where('company_id', isEqualTo: companyId)
+        .get();
     return snap.docs.map((d) => DriverModel.fromJson(d.data())).toList();
   }
 
   // ─── Active Rides ───
-  Future<void> setActiveRide(RideRequestModel ride) =>
-      _db.collection(AppConstants.firestoreActiveRides).doc(ride.id).set(ride.toJson());
+  Future<void> setActiveRide(
+    RideRequestModel ride, {
+    String? frappeBookingId,
+  }) => _db.collection(AppConstants.firestoreActiveRides).doc(ride.id).set({
+    ...ride.toJson(),
+    if (frappeBookingId != null) 'frappe_booking_id': frappeBookingId,
+  });
 
   Future<void> updateActiveRide(String id, Map<String, dynamic> data) =>
       _db.collection(AppConstants.firestoreActiveRides).doc(id).update(data);
 
-  Stream<RideRequestModel?> streamActiveRide(String id) =>
-      _db.collection(AppConstants.firestoreActiveRides).doc(id).snapshots().map(
-        (s) => s.exists ? RideRequestModel.fromJson(s.data()!) : null,
-      );
+  Stream<RideRequestModel?> streamActiveRide(String id) => _db
+      .collection(AppConstants.firestoreActiveRides)
+      .doc(id)
+      .snapshots()
+      .map((s) => s.exists ? RideRequestModel.fromJson(s.data()!) : null);
 
   Stream<List<RideRequestModel>> streamActiveRides({String? companyId}) {
-    Query q = _db.collection(AppConstants.firestoreActiveRides)
+    Query q = _db
+        .collection(AppConstants.firestoreActiveRides)
         .where('status', whereIn: ['pending', 'offered']);
     if (companyId != null) q = q.where('company_id', isEqualTo: companyId);
     return q.snapshots().map(
-      (s) => s.docs.map((d) => RideRequestModel.fromJson(d.data() as Map<String, dynamic>)).toList(),
+      (s) => s.docs
+          .map(
+            (d) => RideRequestModel.fromJson(d.data() as Map<String, dynamic>),
+          )
+          .toList(),
     );
   }
 
@@ -89,84 +114,219 @@ class FirestoreService {
       _db.collection(AppConstants.firestoreActiveRides).doc(id).delete();
 
   Future<bool> hasOpenTaskForUser(String userId) async {
-    final rides = await _db.collection(AppConstants.firestoreActiveRides)
+    final rides = await _db
+        .collection(AppConstants.firestoreActiveRides)
         .where('passenger_id', isEqualTo: userId)
         .where('status', whereIn: ['pending', 'offered', 'accepted'])
-        .limit(1).get();
+        .limit(1)
+        .get();
     if (rides.docs.isNotEmpty) return true;
-    final trips = await _db.collection(AppConstants.firestoreActiveTrips)
+    final trips = await _db
+        .collection(AppConstants.firestoreActiveTrips)
         .where('passenger_id', isEqualTo: userId)
-        .where('status', whereIn: ['pending', 'checkedIn', 'boarded', 'inProgress'])
-        .limit(1).get();
+        .where(
+          'status',
+          whereIn: ['pending', 'checkedIn', 'boarded', 'inProgress'],
+        )
+        .limit(1)
+        .get();
     return trips.docs.isNotEmpty;
   }
 
   Future<bool> hasOpenTaskForProvider(String providerId) async {
-    final rides = await _db.collection(AppConstants.firestoreActiveRides)
+    final rides = await _db
+        .collection(AppConstants.firestoreActiveRides)
         .where('assigned_driver_id', isEqualTo: providerId)
         .where('status', isEqualTo: 'accepted')
-        .limit(1).get();
+        .limit(1)
+        .get();
     if (rides.docs.isNotEmpty) return true;
-    final trips = await _db.collection(AppConstants.firestoreActiveTrips)
+    final trips = await _db
+        .collection(AppConstants.firestoreActiveTrips)
         .where('driver_id', isEqualTo: providerId)
-        .where('status', whereIn: ['pending', 'checkedIn', 'boarded', 'inProgress'])
-        .limit(1).get();
+        .where(
+          'status',
+          whereIn: ['pending', 'checkedIn', 'boarded', 'inProgress'],
+        )
+        .limit(1)
+        .get();
     return trips.docs.isNotEmpty;
   }
 
   // ─── Active Offers ───
-  Future<void> setOffer(RideOfferModel offer) =>
-      _db.collection(AppConstants.firestoreActiveOffers).doc(offer.id).set(offer.toJson());
+  Future<void> setOffer(RideOfferModel offer) => _db
+      .collection(AppConstants.firestoreActiveOffers)
+      .doc(offer.id)
+      .set(offer.toJson());
 
   Future<void> updateOffer(String id, Map<String, dynamic> data) =>
       _db.collection(AppConstants.firestoreActiveOffers).doc(id).update(data);
 
-  Stream<List<RideOfferModel>> streamOffersForRide(String rideRequestId) =>
-      _db.collection(AppConstants.firestoreActiveOffers)
-          .where('ride_request_id', isEqualTo: rideRequestId)
-          .snapshots()
-          .map((s) => s.docs.map((d) => RideOfferModel.fromJson(d.data())).toList());
+  Stream<List<RideOfferModel>> streamOffersForRide(String rideRequestId) => _db
+      .collection(AppConstants.firestoreActiveOffers)
+      .where('ride_request_id', isEqualTo: rideRequestId)
+      .snapshots()
+      .map(
+        (s) => s.docs.map((d) => RideOfferModel.fromJson(d.data())).toList(),
+      );
 
-  Stream<List<RideOfferModel>> streamDriverOffers(String driverId) =>
-      _db.collection(AppConstants.firestoreActiveOffers)
-          .where('driver_id', isEqualTo: driverId)
-          .snapshots()
-          .map((s) => s.docs.map((d) => RideOfferModel.fromJson(d.data())).toList());
+  Stream<List<RideOfferModel>> streamDriverOffers(String driverId) => _db
+      .collection(AppConstants.firestoreActiveOffers)
+      .where('driver_id', isEqualTo: driverId)
+      .snapshots()
+      .map(
+        (s) => s.docs.map((d) => RideOfferModel.fromJson(d.data())).toList(),
+      );
 
   // ─── Active Trips ───
-  Future<void> setActiveTrip(TripModel trip) =>
-      _db.collection(AppConstants.firestoreActiveTrips).doc(trip.id).set(trip.toJson());
+  Future<void> setActiveTrip(TripModel trip) => _db
+      .collection(AppConstants.firestoreActiveTrips)
+      .doc(trip.id)
+      .set(trip.toJson());
 
   Future<void> updateActiveTrip(String id, Map<String, dynamic> data) =>
       _db.collection(AppConstants.firestoreActiveTrips).doc(id).update(data);
 
-  Stream<TripModel?> streamActiveTrip(String id) =>
-      _db.collection(AppConstants.firestoreActiveTrips).doc(id)      .snapshots().map(
-        (s) => s.exists ? TripModel.fromJson(s.data() as Map<String, dynamic>) : null,
+  Future<void> projectAcceptedRide({
+    required String offerId,
+    required String rideId,
+    required TripModel trip,
+    required DateTime acceptedAt,
+  }) {
+    final batch = _db.batch();
+    batch.update(
+      _db.collection(AppConstants.firestoreActiveOffers).doc(offerId),
+      {'status': 'accepted', 'responded_at': acceptedAt, 'is_final': true},
+    );
+    batch
+        .update(_db.collection(AppConstants.firestoreActiveRides).doc(rideId), {
+          'status': 'accepted',
+          'assigned_driver_id': trip.driverId,
+          'accepted_offer_id': offerId,
+          'final_amount': trip.fare,
+          'platform_fee': trip.commissionAmount,
+          'is_final_amount_locked': true,
+        });
+    batch.set(
+      _db.collection(AppConstants.firestoreActiveTrips).doc(trip.id),
+      trip.toJson(),
+    );
+    return batch.commit();
+  }
+
+  Future<void> projectCompletedRide({
+    required TripModel trip,
+    required DateTime completedAt,
+  }) {
+    final batch = _db.batch();
+    batch.update(
+      _db.collection(AppConstants.firestoreActiveTrips).doc(trip.id),
+      {
+        'status': TripStatus.completed.name,
+        'arrival_time': completedAt,
+        'provider_completed': true,
+      },
+    );
+    if (trip.rideRequestId?.isNotEmpty == true) {
+      batch.update(
+        _db
+            .collection(AppConstants.firestoreActiveRides)
+            .doc(trip.rideRequestId),
+        {'status': 'completed'},
       );
+    }
+    return batch.commit();
+  }
+
+  Future<void> updateLiveTripLocation({
+    required String tripId,
+    required String driverId,
+    required double latitude,
+    required double longitude,
+    required double accuracy,
+    required double speed,
+    required double heading,
+  }) {
+    final data = <String, dynamic>{
+      'current_lat': latitude,
+      'current_lng': longitude,
+      'location_accuracy': accuracy,
+      'location_speed': speed,
+      'location_heading': heading,
+      'location_updated_at': FieldValue.serverTimestamp(),
+    };
+    return Future.wait([
+      _db
+          .collection(AppConstants.firestoreActiveTrips)
+          .doc(tripId)
+          .update(data),
+      _db.collection(AppConstants.firestoreDrivers).doc(driverId).set({
+        'user_id': driverId,
+        'latitude': latitude,
+        'longitude': longitude,
+        'last_location_update': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+    ]).then((_) {});
+  }
+
+  Stream<TripModel?> streamActiveTrip(String id) => _db
+      .collection(AppConstants.firestoreActiveTrips)
+      .doc(id)
+      .snapshots()
+      .map(
+        (s) => s.exists
+            ? TripModel.fromJson(s.data() as Map<String, dynamic>)
+            : null,
+      );
+
+  Stream<TripModel?> streamActiveTripForDriver(String driverId) => _db
+      .collection(AppConstants.firestoreActiveTrips)
+      .where('driver_id', isEqualTo: driverId)
+      .limit(10)
+      .snapshots()
+      .map((snapshot) {
+        for (final document in snapshot.docs) {
+          final trip = TripModel.fromJson(document.data());
+          if (trip.status != TripStatus.completed &&
+              trip.status != TripStatus.cancelled) {
+            return trip;
+          }
+        }
+        return null;
+      });
 
   Future<void> deleteActiveTrip(String id) =>
       _db.collection(AppConstants.firestoreActiveTrips).doc(id).delete();
 
   // ─── Wallet & Transactions ───
   Future<WalletModel?> getWallet(String userId) async {
-    final snap = await _db.collection(AppConstants.firestoreWallets)
-        .where('user_id', isEqualTo: userId).limit(1).get();
+    final snap = await _db
+        .collection(AppConstants.firestoreWallets)
+        .where('user_id', isEqualTo: userId)
+        .limit(1)
+        .get();
     if (snap.docs.isEmpty) return null;
     return WalletModel.fromJson(snap.docs.first.data());
   }
 
-  Future<void> setWallet(WalletModel wallet) =>
-      _db.collection(AppConstants.firestoreWallets).doc(wallet.id).set(wallet.toJson());
+  Future<void> setWallet(WalletModel wallet) => _db
+      .collection(AppConstants.firestoreWallets)
+      .doc(wallet.id)
+      .set(wallet.toJson());
 
-  Future<void> addTransaction(TransactionModel tx) =>
-      _db.collection(AppConstants.firestoreTransactions).doc(tx.id).set(tx.toJson());
+  Future<void> addTransaction(TransactionModel tx) => _db
+      .collection(AppConstants.firestoreTransactions)
+      .doc(tx.id)
+      .set(tx.toJson());
 
   Future<void> updateTransactionStatus(String txId, TransactionStatus status) =>
-      _db.collection(AppConstants.firestoreTransactions).doc(txId).update({'status': status.name});
+      _db.collection(AppConstants.firestoreTransactions).doc(txId).update({
+        'status': status.name,
+      });
 
   Future<List<TransactionModel>> getPendingTopUps() async {
-    final snap = await _db.collection(AppConstants.firestoreTransactions)
+    final snap = await _db
+        .collection(AppConstants.firestoreTransactions)
         .where('reason', isEqualTo: 'topUp')
         .where('status', isEqualTo: 'pending')
         .limit(50)
@@ -199,89 +359,120 @@ class FirestoreService {
       paymentReference: tx.paymentReference,
       createdAt: tx.createdAt,
     );
-    await _db.collection(AppConstants.firestoreTransactions).doc(tx.id).set(completed.toJson());
+    await _db
+        .collection(AppConstants.firestoreTransactions)
+        .doc(tx.id)
+        .set(completed.toJson());
   }
 
-  Stream<List<TransactionModel>> streamTransactions(String userId) =>
-      _db.collection(AppConstants.firestoreTransactions)
-          .where('user_id', isEqualTo: userId)
-          .orderBy('created_at', descending: true)
-          .snapshots()
-          .map((s) => s.docs.map((d) => TransactionModel.fromJson(d.data())).toList());
+  Stream<List<TransactionModel>> streamTransactions(String userId) => _db
+      .collection(AppConstants.firestoreTransactions)
+      .where('user_id', isEqualTo: userId)
+      .orderBy('created_at', descending: true)
+      .snapshots()
+      .map(
+        (s) => s.docs.map((d) => TransactionModel.fromJson(d.data())).toList(),
+      );
 
   // ─── Commissions ───
-  Future<void> setCommission(CommissionModel commission) =>
-      _db.collection(AppConstants.firestoreCommissions).doc(commission.id).set(commission.toJson());
+  Future<void> setCommission(CommissionModel commission) => _db
+      .collection(AppConstants.firestoreCommissions)
+      .doc(commission.id)
+      .set(commission.toJson());
 
-  Stream<List<CommissionModel>> streamCommissions(String companyId) =>
-      _db.collection(AppConstants.firestoreCommissions)
-          .where('company_id', isEqualTo: companyId)
-          .orderBy('created_at', descending: true)
-          .snapshots()
-          .map((s) => s.docs.map((d) => CommissionModel.fromJson(d.data())).toList());
+  Stream<List<CommissionModel>> streamCommissions(String companyId) => _db
+      .collection(AppConstants.firestoreCommissions)
+      .where('company_id', isEqualTo: companyId)
+      .orderBy('created_at', descending: true)
+      .snapshots()
+      .map(
+        (s) => s.docs.map((d) => CommissionModel.fromJson(d.data())).toList(),
+      );
 
   // ─── Companies (cached) ───
   Future<CompanyModel?> getCompany(String id) async {
-    final doc = await _db.collection(AppConstants.firestoreCompanies).doc(id).get();
+    final doc = await _db
+        .collection(AppConstants.firestoreCompanies)
+        .doc(id)
+        .get();
     return doc.exists ? CompanyModel.fromJson(doc.data()!) : null;
   }
 
-  Future<void> setCompany(CompanyModel company) =>
-      _db.collection(AppConstants.firestoreCompanies).doc(company.id).set(company.toJson());
+  Future<void> setCompany(CompanyModel company) => _db
+      .collection(AppConstants.firestoreCompanies)
+      .doc(company.id)
+      .set(company.toJson());
 
-  Stream<List<CompanyModel>> streamCompanies() =>
-      _db.collection(AppConstants.firestoreCompanies).snapshots().map(
-        (s) => s.docs.map((d) => CompanyModel.fromJson(d.data())).toList(),
-      );
+  Stream<List<CompanyModel>> streamCompanies() => _db
+      .collection(AppConstants.firestoreCompanies)
+      .snapshots()
+      .map((s) => s.docs.map((d) => CompanyModel.fromJson(d.data())).toList());
 
   // ─── Vehicles ───
-  Future<void> setVehicle(VehicleModel vehicle) =>
-      _db.collection(AppConstants.firestoreVehicles).doc(vehicle.id).set(vehicle.toJson());
+  Future<void> setVehicle(VehicleModel vehicle) => _db
+      .collection(AppConstants.firestoreVehicles)
+      .doc(vehicle.id)
+      .set(vehicle.toJson());
 
-  Stream<List<VehicleModel>> streamVehicles(String companyId) =>
-      _db.collection(AppConstants.firestoreVehicles)
-          .where('company_id', isEqualTo: companyId)
-          .snapshots()
-          .map((s) => s.docs.map((d) => VehicleModel.fromJson(d.data())).toList());
+  Stream<List<VehicleModel>> streamVehicles(String companyId) => _db
+      .collection(AppConstants.firestoreVehicles)
+      .where('company_id', isEqualTo: companyId)
+      .snapshots()
+      .map((s) => s.docs.map((d) => VehicleModel.fromJson(d.data())).toList());
 
   // ─── Travel Agent / Company Contracts ───
-  Future<void> setContract(ContractModel contract) =>
-      _db.collection(AppConstants.firestoreContracts).doc(contract.id).set(contract.toJson());
+  Future<void> setContract(ContractModel contract) => _db
+      .collection(AppConstants.firestoreContracts)
+      .doc(contract.id)
+      .set(contract.toJson());
 
-  Stream<List<ContractModel>> streamContracts(String ownerId) =>
-      _db.collection(AppConstants.firestoreContracts)
-          .where('owner_id', isEqualTo: ownerId)
-          .snapshots()
-          .map((s) => s.docs.map((d) => ContractModel.fromJson(d.data())).toList());
+  Stream<List<ContractModel>> streamContracts(String ownerId) => _db
+      .collection(AppConstants.firestoreContracts)
+      .where('owner_id', isEqualTo: ownerId)
+      .snapshots()
+      .map((s) => s.docs.map((d) => ContractModel.fromJson(d.data())).toList());
 
   // ─── Chat ───
-  Future<void> sendChatMessage(ChatMessageModel message) =>
-      _db.collection(AppConstants.firestoreChatMessages).doc(message.id).set(message.toJson());
+  Future<void> sendChatMessage(ChatMessageModel message) => _db
+      .collection(AppConstants.firestoreChatMessages)
+      .doc(message.id)
+      .set(message.toJson());
 
-  Stream<List<ChatMessageModel>> streamChatMessages(String rideRequestId) =>
-      _db.collection(AppConstants.firestoreChatMessages)
-          .where('ride_request_id', isEqualTo: rideRequestId)
-          .orderBy('created_at')
-          .snapshots()
-          .map((s) => s.docs.map((d) => ChatMessageModel.fromJson(d.data())).toList());
+  Stream<List<ChatMessageModel>> streamChatMessages(String rideRequestId) => _db
+      .collection(AppConstants.firestoreChatMessages)
+      .where('ride_request_id', isEqualTo: rideRequestId)
+      .orderBy('created_at')
+      .snapshots()
+      .map(
+        (s) => s.docs.map((d) => ChatMessageModel.fromJson(d.data())).toList(),
+      );
 
   // ─── Group Invites & Members ───
-  Future<void> setGroupInvite(GroupInviteModel invite) =>
-      _db.collection(AppConstants.firestoreGroupInvites).doc(invite.id).set(invite.toJson());
+  Future<void> setGroupInvite(GroupInviteModel invite) => _db
+      .collection(AppConstants.firestoreGroupInvites)
+      .doc(invite.id)
+      .set(invite.toJson());
 
   Future<GroupInviteModel?> getGroupInvite(String id) async {
-    final doc = await _db.collection(AppConstants.firestoreGroupInvites).doc(id).get();
+    final doc = await _db
+        .collection(AppConstants.firestoreGroupInvites)
+        .doc(id)
+        .get();
     return doc.exists ? GroupInviteModel.fromJson(doc.data()!) : null;
   }
 
-  Future<void> setGroupMember(GroupMemberModel member) =>
-      _db.collection(AppConstants.firestoreGroupMembers).doc(member.id).set(member.toJson());
+  Future<void> setGroupMember(GroupMemberModel member) => _db
+      .collection(AppConstants.firestoreGroupMembers)
+      .doc(member.id)
+      .set(member.toJson());
 
-  Stream<List<GroupMemberModel>> streamGroupMembers(String rideRequestId) =>
-      _db.collection(AppConstants.firestoreGroupMembers)
-          .where('ride_request_id', isEqualTo: rideRequestId)
-          .snapshots()
-          .map((s) => s.docs.map((d) => GroupMemberModel.fromJson(d.data())).toList());
+  Stream<List<GroupMemberModel>> streamGroupMembers(String rideRequestId) => _db
+      .collection(AppConstants.firestoreGroupMembers)
+      .where('ride_request_id', isEqualTo: rideRequestId)
+      .snapshots()
+      .map(
+        (s) => s.docs.map((d) => GroupMemberModel.fromJson(d.data())).toList(),
+      );
 
   // ─── Routes (cached) ───
   Future<List<RouteModel>> getRoutes() async {
@@ -292,29 +483,41 @@ class FirestoreService {
   Future<void> setRoutes(List<RouteModel> routes) async {
     final batch = _db.batch();
     for (final r in routes) {
-      batch.set(_db.collection(AppConstants.firestoreRoutes).doc(r.id), r.toJson());
+      batch.set(
+        _db.collection(AppConstants.firestoreRoutes).doc(r.id),
+        r.toJson(),
+      );
     }
     await batch.commit();
   }
 
   // ─── Subscriptions ───
   Future<SubscriptionModel?> getSubscription(String companyId) async {
-    final snap = await _db.collection(AppConstants.firestoreSubscriptions)
-        .where('company_id', isEqualTo: companyId).limit(1).get();
+    final snap = await _db
+        .collection(AppConstants.firestoreSubscriptions)
+        .where('company_id', isEqualTo: companyId)
+        .limit(1)
+        .get();
     if (snap.docs.isEmpty) return null;
     return SubscriptionModel.fromJson(snap.docs.first.data());
   }
 
-  Future<void> setSubscription(SubscriptionModel sub) =>
-      _db.collection(AppConstants.firestoreSubscriptions).doc(sub.id).set(sub.toJson());
+  Future<void> setSubscription(SubscriptionModel sub) => _db
+      .collection(AppConstants.firestoreSubscriptions)
+      .doc(sub.id)
+      .set(sub.toJson());
 
   // ─── Trip Transfers / Resale ───
-  Future<void> setTripTransfer(TripTransferModel transfer) =>
-      _db.collection(AppConstants.firestoreTripTransfers).doc(transfer.id).set(transfer.toJson());
+  Future<void> setTripTransfer(TripTransferModel transfer) => _db
+      .collection(AppConstants.firestoreTripTransfers)
+      .doc(transfer.id)
+      .set(transfer.toJson());
 
-  Stream<List<TripTransferModel>> streamOpenTripTransfers() =>
-      _db.collection(AppConstants.firestoreTripTransfers)
-          .where('status', isEqualTo: 'open')
-          .snapshots()
-          .map((s) => s.docs.map((d) => TripTransferModel.fromJson(d.data())).toList());
+  Stream<List<TripTransferModel>> streamOpenTripTransfers() => _db
+      .collection(AppConstants.firestoreTripTransfers)
+      .where('status', isEqualTo: 'open')
+      .snapshots()
+      .map(
+        (s) => s.docs.map((d) => TripTransferModel.fromJson(d.data())).toList(),
+      );
 }

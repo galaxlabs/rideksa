@@ -43,7 +43,6 @@ final GlobalKey<NavigatorState> _rootNavigator = GlobalKey<NavigatorState>();
 GoRouter createRouter(AuthProvider auth) {
   return GoRouter(
     navigatorKey: _rootNavigator,
-    initialLocation: '/auth/login',
     refreshListenable: auth,
     errorBuilder: (context, state) => AppRouteErrorScreen(error: state.error),
     redirect: (context, state) {
@@ -52,6 +51,17 @@ GoRouter createRouter(AuthProvider auth) {
       final onAuthPage = location.startsWith('/auth');
       final publicInvite = location.startsWith('/join/');
       if (publicInvite) return null;
+      if (auth.state == AuthState.initial || auth.state == AuthState.loading) {
+        return null;
+      }
+      if (location == '/') {
+        if (!loggedIn) return '/auth/login';
+        final role = auth.user?.role;
+        if (role == UserRole.passenger) return '/passenger';
+        if (role == UserRole.driver) return '/driver';
+        if (role == UserRole.superAdmin) return '/super-admin';
+        return '/admin';
+      }
       if (location == '/auth/role-select') return '/auth/login';
       if (!loggedIn && !onAuthPage) return '/auth/login';
       if (loggedIn && onAuthPage) {
@@ -69,6 +79,11 @@ GoRouter createRouter(AuthProvider auth) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, __) =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
+      ),
       GoRoute(path: '/auth/login', builder: (_, __) => const LoginScreen()),
       GoRoute(
         path: '/auth/otp',
@@ -154,8 +169,9 @@ GoRouter createRouter(AuthProvider auth) {
         builder: (_, __) => const NearbyRidesScreen(),
       ),
       GoRoute(
-        path: '/driver/active-trip',
-        builder: (_, state) => ActiveTripScreen(tripId: state.extra as String),
+        path: '/driver/active-trip/:tripId',
+        builder: (_, state) =>
+            ActiveTripScreen(tripId: state.pathParameters['tripId'] ?? ''),
       ),
       GoRoute(
         path: '/driver/earnings',

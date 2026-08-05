@@ -36,47 +36,65 @@ class LocationProvider extends ChangeNotifier {
   Future<String> getAddress() async {
     if (_position == null) return '';
     _address = await _service.getAddressFromLatLng(
-      _position!.latitude, _position!.longitude,
+      _position!.latitude,
+      _position!.longitude,
     );
     notifyListeners();
     return _address ?? '';
   }
 
-  void startTracking() {
+  void startTracking({void Function(Position)? onPosition}) {
     if (_isTracking) return;
     _isTracking = true;
-    _sub = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 50,
-      ),
-    ).listen((pos) {
-      _position = pos;
-      notifyListeners();
-    });
+    _sub =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 50,
+          ),
+        ).listen((pos) {
+          _position = pos;
+          onPosition?.call(pos);
+          notifyListeners();
+        });
   }
 
-  void startForegroundTracking() {
+  void startForegroundTracking({void Function(Position)? onPosition}) {
     if (_isTracking) return;
     _isTracking = true;
-    _service.startForegroundTracking((pos) {
-      _position = pos;
-      notifyListeners();
-    });
+    _service.startForegroundTracking(
+      (pos) {
+        _position = pos;
+        onPosition?.call(pos);
+        notifyListeners();
+      },
+      onError: (_) => _trackingStopped(),
+      onDone: _trackingStopped,
+    );
+  }
+
+  void _trackingStopped() {
+    _isTracking = false;
+    notifyListeners();
   }
 
   void stopTracking() {
     _isTracking = false;
     _sub?.cancel();
     _sub = null;
+    _service.stopTracking();
     notifyListeners();
   }
 
   double distanceTo(double lat, double lng) {
     if (_position == null) return 0;
     return Geolocator.distanceBetween(
-      _position!.latitude, _position!.longitude, lat, lng,
-    ) / 1000;
+          _position!.latitude,
+          _position!.longitude,
+          lat,
+          lng,
+        ) /
+        1000;
   }
 
   @override

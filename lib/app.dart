@@ -6,6 +6,7 @@ import 'core/theme.dart';
 import 'core/routes.dart';
 import 'providers/auth_provider.dart';
 import 'services/integrity_service.dart';
+import 'services/notification_service.dart';
 import 'services/update_checker_service.dart';
 
 class RideKSAApp extends StatefulWidget {
@@ -44,6 +45,48 @@ class AppDependencies extends StatefulWidget {
 class _AppDependenciesState extends State<AppDependencies> {
   final UpdateCheckerService _updateChecker = UpdateCheckerService();
   bool _checkedUpdates = false;
+  String? _notificationUser;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = context.watch<AuthProvider>().user;
+    if (user == null) {
+      if (_notificationUser != null) {
+        _notificationUser = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) context.read<NotificationService>().unregister();
+        });
+      }
+      return;
+    }
+    if (_notificationUser == user.uid) return;
+    _notificationUser = user.uid;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _initializeNotifications(user.uid, user.lastDeviceId);
+    });
+  }
+
+  Future<void> _initializeNotifications(String userId, String? deviceId) async {
+    try {
+      await context.read<NotificationService>().initializeForUser(
+        userId,
+        deviceId: deviceId,
+      );
+    } catch (error, stack) {
+      debugPrint('NOTIFICATION INIT ERROR: $error');
+      debugPrintStack(stackTrace: stack);
+      if (mounted && _notificationUser == userId) {
+        await Future<void>.delayed(const Duration(seconds: 30));
+        if (mounted && _notificationUser == userId) {
+          _notificationUser = null;
+          _notificationUser = userId;
+          await _initializeNotifications(userId, deviceId);
+        }
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -73,7 +116,11 @@ class _AppDependenciesState extends State<AppDependencies> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.system_update_alt, color: AppColors.accent, size: 40),
+        icon: const Icon(
+          Icons.system_update_alt,
+          color: AppColors.accent,
+          size: 40,
+        ),
         title: Text('New update available v${update.version}'),
         content: SingleChildScrollView(
           child: Column(
@@ -81,18 +128,38 @@ class _AppDependenciesState extends State<AppDependencies> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (update.date.isNotEmpty)
-                Text('Released ${update.date}', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                Text(
+                  'Released ${update.date}',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
               const SizedBox(height: 12),
               if (update.features.isNotEmpty) ...[
-                Text('What is new:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  'What is new:',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 6),
-                ...update.features.map((f) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('• ', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
-                    Expanded(child: Text(f)),
-                  ]),
-                )),
+                ...update.features.map(
+                  (f) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '• ',
+                          style: TextStyle(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Expanded(child: Text(f)),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ],
           ),
@@ -105,14 +172,20 @@ class _AppDependenciesState extends State<AppDependencies> {
           ElevatedButton.icon(
             onPressed: () async {
               Navigator.pop(ctx);
-              final ok = await launchUrl(Uri.parse(update.apkUrl), mode: LaunchMode.externalApplication);
+              final ok = await launchUrl(
+                Uri.parse(update.apkUrl),
+                mode: LaunchMode.externalApplication,
+              );
               if (!ok) {
                 debugPrint('FAILED to open: ${update.apkUrl}');
               }
             },
             icon: const Icon(Icons.download),
             label: const Text('Download'),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),
@@ -128,7 +201,9 @@ class _AppDependenciesState extends State<AppDependencies> {
       if (!result.passed && result.error != null) {
         debugPrint('PLAY INTEGRITY: ${result.error}');
       } else {
-        debugPrint('PLAY INTEGRITY: passed (app=${result.appVerdict}, device=${result.deviceVerdict})');
+        debugPrint(
+          'PLAY INTEGRITY: passed (app=${result.appVerdict}, device=${result.deviceVerdict})',
+        );
       }
     } catch (e) {
       debugPrint('PLAY INTEGRITY ERROR: $e');

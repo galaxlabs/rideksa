@@ -1,7 +1,7 @@
 name: rideksa
 description: "RideKSA - Ride Hailing & Fleet Management App for Saudi Arabia"
 publish_to: 'none'
-version: 0.0.12+15
+version: 0.0.13+16
 
 environment:
   sdk: ^3.11.5
@@ -16,6 +16,7 @@ dependencies:
   firebase_auth: ^5.5.1
   cloud_firestore: ^5.6.5
   firebase_messaging: ^15.2.4
+  firebase_crashlytics: ^4.3.10
 
   # State Management
   provider: ^6.1.5

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../models/driver_model.dart';
@@ -16,7 +17,8 @@ class LocationService {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    return permission == LocationPermission.always || permission == LocationPermission.whileInUse;
+    return permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
   }
 
   Future<Position> getCurrentPosition() async {
@@ -37,7 +39,21 @@ class LocationService {
     ).listen(onUpdate);
   }
 
-  void startForegroundTracking(void Function(Position pos) onUpdate) {
+  void startForegroundTracking(
+    void Function(Position pos) onUpdate, {
+    void Function(Object error)? onError,
+    void Function()? onDone,
+  }) {
+    if (kIsWeb) {
+      _positionSub?.cancel();
+      _positionSub = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 50,
+        ),
+      ).listen(onUpdate, onError: onError, onDone: onDone);
+      return;
+    }
     _positionSub?.cancel();
     _positionSub = Geolocator.getPositionStream(
       locationSettings: AndroidSettings(
@@ -52,7 +68,7 @@ class LocationService {
           setOngoing: true,
         ),
       ),
-    ).listen(onUpdate);
+    ).listen(onUpdate, onError: onError, onDone: onDone);
   }
 
   void stopTracking() {
@@ -83,26 +99,46 @@ class LocationService {
     return Geolocator.distanceBetween(lat1, lon1, lat2, lon2) / 1000;
   }
 
-  List<DriverModel> filterByRadius(List<DriverModel> drivers, double lat, double lon, {double radiusKm = 50}) {
-    return drivers.where((d) {
-      if (d.latitude == null || d.longitude == null) return false;
-      final dist = calculateDistance(lat, lon, d.latitude!, d.longitude!);
-      return dist <= radiusKm;
-    }).map((d) {
-      final dist = calculateDistance(lat, lon, d.latitude!, d.longitude!);
-      return DriverModel(
-        id: d.id, userId: d.userId, fullName: d.fullName,
-        phone: d.phone, vehicleType: d.vehicleType,
-        vehiclePlate: d.vehiclePlate, status: d.status,
-        latitude: d.latitude, longitude: d.longitude,
-        rating: d.rating, totalTrips: d.totalTrips,
-        isAvailable: d.isAvailable, distanceKm: double.parse(dist.toStringAsFixed(1)),
-        companyId: d.companyId, createdAt: d.createdAt,
-      );
-    }).toList();
+  List<DriverModel> filterByRadius(
+    List<DriverModel> drivers,
+    double lat,
+    double lon, {
+    double radiusKm = 50,
+  }) {
+    return drivers
+        .where((d) {
+          if (d.latitude == null || d.longitude == null) return false;
+          final dist = calculateDistance(lat, lon, d.latitude!, d.longitude!);
+          return dist <= radiusKm;
+        })
+        .map((d) {
+          final dist = calculateDistance(lat, lon, d.latitude!, d.longitude!);
+          return DriverModel(
+            id: d.id,
+            userId: d.userId,
+            fullName: d.fullName,
+            phone: d.phone,
+            vehicleType: d.vehicleType,
+            vehiclePlate: d.vehiclePlate,
+            status: d.status,
+            latitude: d.latitude,
+            longitude: d.longitude,
+            rating: d.rating,
+            totalTrips: d.totalTrips,
+            isAvailable: d.isAvailable,
+            distanceKm: double.parse(dist.toStringAsFixed(1)),
+            companyId: d.companyId,
+            createdAt: d.createdAt,
+          );
+        })
+        .toList();
   }
 
-  double estimateFare(double distanceKm, {double baseFare = 10, double perKmRate = 1.5}) {
+  double estimateFare(
+    double distanceKm, {
+    double baseFare = 10,
+    double perKmRate = 1.5,
+  }) {
     return baseFare + (distanceKm * perKmRate);
   }
 

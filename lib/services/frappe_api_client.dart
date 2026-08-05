@@ -234,6 +234,7 @@ class FrappeApiClient {
     double? pickupLat,
     double? pickupLng,
     List<Map<String, dynamic>>? passengerList,
+    String? externalReference,
   }) async {
     final body = <String, dynamic>{
       'pickup_point': pickup,
@@ -248,6 +249,9 @@ class FrappeApiClient {
     if (vehicleType != null) body['vehicle_type'] = vehicleType;
     if (pickupLat != null) body['pickup_latitude'] = pickupLat;
     if (pickupLng != null) body['pickup_longitude'] = pickupLng;
+    if (externalReference != null) {
+      body['external_reference'] = externalReference;
+    }
     if (passengerList != null && passengerList.isNotEmpty) {
       body['passengers'] = passengerList;
       body['seat_count'] = passengerList.length;
@@ -504,6 +508,36 @@ class FrappeApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> completeAssignedTrip({
+    String? trip,
+    String? booking,
+    required String operationId,
+  }) async {
+    return _messageMap(
+      await callMethod(
+        '$_apiBase.ride.complete_assigned_trip',
+        body: {'name': trip, 'booking': booking, 'operation_id': operationId},
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> acceptBookingAsCaptain({
+    required String booking,
+    required double offeredFare,
+    String? vehicle,
+  }) async {
+    return _messageMap(
+      await callMethod(
+        '$_apiBase.booking.accept_booking_as_captain',
+        body: {
+          'booking_name': booking,
+          'offered_fare': offeredFare,
+          if (vehicle?.isNotEmpty == true) 'vehicle': vehicle,
+        },
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>> previewCancelPenalty(String bookingName) async {
     return _messageMap(
       await callMethod(
@@ -552,6 +586,24 @@ class FrappeApiClient {
     await callMethod(
       '$_apiBase.notifications.mark_read',
       query: {'name': name},
+    );
+  }
+
+  Future<void> registerDeviceToken({
+    required String token,
+    required String platform,
+    String? deviceId,
+  }) async {
+    await callMethod(
+      '$_apiBase.notifications.register_device_token',
+      body: {'token': token, 'platform': platform, 'device_id': deviceId},
+    );
+  }
+
+  Future<void> unregisterDeviceToken(String token) async {
+    await callMethod(
+      '$_apiBase.notifications.unregister_device_token',
+      body: {'token': token},
     );
   }
 

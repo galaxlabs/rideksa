@@ -25,10 +25,7 @@ class SyncService {
   }
 
   Future<void> syncAll() async {
-    await Future.wait([
-      syncRoutes(),
-      syncCompanies(),
-    ]);
+    await Future.wait([syncRoutes(), syncCompanies()]);
   }
 
   Future<void> syncRoutes() async {
@@ -41,7 +38,17 @@ class SyncService {
 
   Future<void> syncCompanies() async {
     try {
-      final companies = await _frappe.getList('Company', fields: ['name', 'company_name', 'custom_company_name_arabic', 'phone_no', 'email', 'company_logo']);
+      final companies = await _frappe.getList(
+        'Company',
+        fields: [
+          'name',
+          'company_name',
+          'custom_company_name_arabic',
+          'phone_no',
+          'email',
+          'company_logo',
+        ],
+      );
       for (final c in companies) {
         final model = CompanyModel(
           id: c['name'] as String? ?? '',
@@ -56,7 +63,7 @@ class SyncService {
     } catch (_) {}
   }
 
-  Future<void> pushRideToFrappe(RideRequestModel ride) async {
+  Future<String?> pushRideToFrappe(RideRequestModel ride) async {
     try {
       final result = await _frappe.createBooking(
         pickup: ride.pickupLocation,
@@ -69,35 +76,37 @@ class SyncService {
         vehicleType: ride.vehicleType,
         pickupLat: ride.pickupLat,
         pickupLng: ride.pickupLng,
-        passengerList: ride.passengerRows.isNotEmpty ? ride.passengerRows : null,
+        externalReference: ride.id,
+        passengerList: ride.passengerRows.isNotEmpty
+            ? ride.passengerRows
+            : null,
       );
       final frappeId = result['name'] as String?;
-      if (frappeId != null) {
-        await _firestore.updateActiveRide(ride.id, {
-          'frappe_booking_id': frappeId,
-          'status': 'pending',
-        });
-      }
+      return frappeId;
     } catch (e) {
       debugPrint('pushRideToFrappe failed: $e');
+      return null;
     }
   }
 
-  Future<void> pushTripToFrappe(TripModel trip) async {
-    try {
-      final doc = {
-        'doctype': 'Trip',
-        'from_location': trip.pickupLocation,
-        'to_location': trip.dropoffLocation,
-        'trip_value': trip.fare,
-        'status': trip.status.name,
-      };
-      final result = await _frappe.createDoc('Trip', doc);
-      final frappeId = result['name'] as String?;
-      if (frappeId != null) {
-        await _firestore.updateActiveTrip(trip.id, {'frappe_trip_id': frappeId});
-      }
-    } catch (_) {}
+  Future<Map<String, dynamic>> acceptBookingAsCaptain({
+    required String booking,
+    required double offeredFare,
+    String? vehicle,
+  }) {
+    return _frappe.acceptBookingAsCaptain(
+      booking: booking,
+      offeredFare: offeredFare,
+      vehicle: vehicle,
+    );
+  }
+
+  Future<Map<String, dynamic>> completeTrip(TripModel trip) {
+    return _frappe.completeAssignedTrip(
+      trip: trip.frappeTripId,
+      booking: trip.bookingId,
+      operationId: 'complete:${trip.id}',
+    );
   }
 
   void dispose() {
