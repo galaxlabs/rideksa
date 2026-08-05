@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/frappe_api_client.dart';
 import '../../widgets/sidebar_page.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -170,8 +171,13 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   void _showTopUpDialog(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    final frappe = context.read<FrappeApiClient>();
+    final isAdmin = auth.user?.role.name == 'superAdmin' ||
+        auth.user?.role.name == 'admin';
     final controller = TextEditingController();
-    var paymentMethod = 'test_wallet';
+    var paymentMethod = 'moyaser';
+    var processing = false;
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -196,69 +202,36 @@ class _WalletScreenState extends State<WalletScreen> {
                     labelText: 'Payment Method',
                     prefixIcon: Icon(Icons.account_balance),
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'test_wallet',
-                      child: Text('Testing Credit'),
+                  items: [
+                    const DropdownMenuItem(
+                      value: 'moyaser',
+                      child: Text('Moyasser (Card / Mada / Apple Pay)'),
                     ),
-                    DropdownMenuItem(value: 'mada', child: Text('Mada')),
-                    DropdownMenuItem(value: 'stc_pay', child: Text('STC Pay')),
-                    DropdownMenuItem(value: 'sadad', child: Text('SADAD')),
-                    DropdownMenuItem(
-                      value: 'bank_transfer',
-                      child: Text('Saudi Bank Transfer'),
-                    ),
+                    if (isAdmin)
+                      const DropdownMenuItem(
+                        value: 'test_credit',
+                        child: Text('Test Credit (Admin only)'),
+                      ),
                   ],
-                  onChanged: (v) =>
-                      setDialogState(() => paymentMethod = v ?? paymentMethod),
+                  onChanged: (v) => setDialogState(
+                    () => paymentMethod = v ?? paymentMethod,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                if (paymentMethod == 'bank_transfer') ...[
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.notifications_active_outlined,
-                        color: AppColors.warning,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Auto-verify: transfer the amount from your bank app, then RideKSA reads the transfer notification to confirm your top-up instantly.',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
+                if (paymentMethod == 'moyaser')
+                  const Text(
+                    'You will be redirected to Moyasser to complete payment securely.',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                   ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      const target =
-                          'android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS';
-                      final canOpen = await canLaunchUrl(
-                        Uri(scheme: 'android.settings', host: target),
-                      );
-                      if (canOpen) {
-                        await launchUrl(
-                          Uri(scheme: 'android.settings', host: target),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.settings_accessibility, size: 16),
-                    label: const Text('Enable Notification Access'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                    ),
+                if (paymentMethod == 'test_credit')
+                  const Text(
+                    'Instantly credits your wallet without real payment (testing only).',
+                    style: TextStyle(color: AppColors.warning, fontSize: 12),
                   ),
-                ] else
-                  Text(
-                    'Production flow: create payment intent with Saudi gateway, wait for verified callback/webhook, then credit wallet and mark transaction completed.',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
+                if (processing)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 12),
+                    child: LinearProgressIndicator(),
                   ),
               ],
             ),
@@ -269,17 +242,55 @@ class _WalletScreenState extends State<WalletScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                final amt = double.tryParse(controller.text) ?? 0;
-                if (amt > 0) {
-                  context.read<WalletProvider>().topUp(
-                    amt,
-                    paymentMethod: paymentMethod,
-                  );
-                  Navigator.pop(ctx);
-                }
-              },
-              child: const Text('Add'),
+              onPressed: processing
+                  ? null
+                  : () async {
+                      final amt = double.tryParse(controller.text) ?? 0;
+                      if (amt <= 0) return;
+                      if (paymentMethod == 'test_credit') {
+                        Navigator.pop(ctx);
+                        context.read<WalletProvider>().topUp(
+                          amt,
+                          paymentMethod: 'test_wallet',
+                        );
+                        return;
+                      }
+                      setDialogState(() => processing = true);
+                      try {
+                        final result = await frappe.createMoyasserPayment(
+                          amount: amt,
+                          description: 'RideKSA wallet top-up',
+                        );
+                        final url = result['payment_url']?.toString() ?? '';
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        if (url.isNotEmpty) {
+                          await launchUrl(
+                            Uri.parse(url),
+                            mode: LaunchMode.externalApplication,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Complete payment in the browser. Your wallet will credit automatically.'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          setDialogState(() => processing = false);
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(
+                              content: Text('Payment failed: $e'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: const Text('Proceed'),
             ),
           ],
         ),
