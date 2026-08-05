@@ -186,6 +186,16 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     context.push('/passenger/book', extra: extra);
   }
 
+  bool get _canRepeat {
+    final b = _booking;
+    if (b == null) return false;
+    final negotiation = b['negotiation_status'] as String?;
+    final bstatus = b['booking_status'] as String?;
+    return negotiation == 'Trip Created' ||
+        negotiation == 'Confirmed' ||
+        bstatus == 'Closed' ||
+        bstatus == 'Completed';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -507,20 +517,21 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               ],
             ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _repeatBooking,
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('Repeat Booking'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 46),
+          if (_canRepeat)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _repeatBooking,
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Repeat Booking'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 46),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );
