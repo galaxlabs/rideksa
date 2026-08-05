@@ -515,10 +515,15 @@ class FrappeApiClient {
     return _messageList(result);
   }
 
-  Future<Map<String, dynamic>> getBookingDetail(String name) async {
-    return _messageMap(
-      await callMethod('$_apiBase.booking.get_booking', query: {'name': name}),
+  Future<Map<String, dynamic>?> getBookingDetail(String name) async {
+    final result = await callMethod(
+      '$_apiBase.booking.get_booking',
+      query: {'name': name},
     );
+    final payload = result is Map<String, dynamic> ? result['message'] : result;
+    if (payload == null) return null;
+    if (payload is Map) return Map<String, dynamic>.from(payload);
+    throw const ApiException('Invalid booking response.');
   }
 
   Future<Map<String, dynamic>> getPriceQuote({
