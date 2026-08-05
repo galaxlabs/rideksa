@@ -65,72 +65,82 @@ class UpdateCheckerService {
   }
 
   Future<UpdateInfo?> _fetchFromGithub() async {
-    final res = await _client
-        .get(
-          Uri.parse(githubApiLatest),
-          headers: {
-            'Accept': 'application/vnd.github+json',
-            'User-Agent': 'RideKSA',
-          },
-        )
-        .timeout(const Duration(seconds: 10));
-    if (res.statusCode != 200) return null;
+    try {
+      final res = await _client
+          .get(
+            Uri.parse(githubApiLatest),
+            headers: {
+              'Accept': 'application/vnd.github+json',
+              'User-Agent': 'RideKSA',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return null;
 
-    final json = jsonDecode(res.body) as Map<String, dynamic>;
-    final tag = json['tag_name'] as String? ?? '';
-    final match = RegExp(r'v?(\d+\.\d+\.\d+)(?:\+(\d+))?').firstMatch(tag);
-    if (match == null) return null;
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map<String, dynamic>) return null;
+      final tag = decoded['tag_name'] as String? ?? '';
+      final match = RegExp(r'v?(\d+\.\d+\.\d+)(?:\+(\d+))?').firstMatch(tag);
+      if (match == null) return null;
 
-    final version = match.group(1)!;
-    final build =
-        int.tryParse(match.group(2) ?? '') ?? _buildFromVersion(version);
+      final version = match.group(1) ?? '';
+      final build =
+          int.tryParse(match.group(2) ?? '') ?? _buildFromVersion(version);
 
-    String apkUrl = defaultApkUrl;
-    final assets = json['assets'] as List? ?? [];
-    for (final a in assets) {
-      if (a is Map && (a['name'] as String? ?? '').endsWith('.apk')) {
-        apkUrl = a['browser_download_url'] as String? ?? apkUrl;
-        break;
+      String apkUrl = defaultApkUrl;
+      final assets = decoded['assets'] as List? ?? [];
+      for (final a in assets) {
+        if (a is Map && (a['name'] as String? ?? '').endsWith('.apk')) {
+          apkUrl = a['browser_download_url'] as String? ?? apkUrl;
+          break;
+        }
       }
+
+      final body = decoded['body'] as String? ?? '';
+      final features = body
+          .split(RegExp(r'[\r\n]+'))
+          .map((l) => l.trim().replaceFirst(RegExp(r'^[-*\d.\s]+'), ''))
+          .where((l) => l.isNotEmpty)
+          .toList();
+
+      return UpdateInfo(
+        version: version,
+        build: build,
+        date: decoded['published_at']?.toString().substring(0, 10) ?? '',
+        features: features,
+        apkUrl: apkUrl,
+      );
+    } catch (_) {
+      return null;
     }
-
-    final body = json['body'] as String? ?? '';
-    final features = body
-        .split(RegExp(r'[\r\n]+'))
-        .map((l) => l.trim().replaceFirst(RegExp(r'^[-*\d.\s]+'), ''))
-        .where((l) => l.isNotEmpty)
-        .toList();
-
-    return UpdateInfo(
-      version: version,
-      build: build,
-      date: json['published_at']?.toString().substring(0, 10) ?? '',
-      features: features,
-      apkUrl: apkUrl,
-    );
   }
 
   Future<UpdateInfo?> _fetchFromLanding() async {
-    final res = await _client
-        .get(Uri.parse(releasesJsonUrl))
-        .timeout(const Duration(seconds: 10));
-    if (res.statusCode != 200) return null;
-    final list = jsonDecode(res.body) as List;
-    if (list.isEmpty) return null;
-    final first = list.first as Map<String, dynamic>;
-    final version = first['version'] as String? ?? '';
-    final build = (first['build'] as num?)?.toInt() ?? 0;
-    final features = (first['features'] as List? ?? [])
-        .map((f) => f.toString())
-        .toList();
-    if (version.isEmpty || build == 0) return null;
-    return UpdateInfo(
-      version: version,
-      build: build,
-      date: first['date'] as String? ?? '',
-      features: features,
-      apkUrl: defaultApkUrl,
-    );
+    try {
+      final res = await _client
+          .get(Uri.parse(releasesJsonUrl))
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return null;
+      final decoded = jsonDecode(res.body);
+      if (decoded is! List || decoded.isEmpty) return null;
+      final first = decoded.first;
+      if (first is! Map<String, dynamic>) return null;
+      final version = first['version'] as String? ?? '';
+      final build = (first['build'] as num?)?.toInt() ?? 0;
+      final features = (first['features'] as List? ?? [])
+          .map((f) => f.toString())
+          .toList();
+      if (version.isEmpty || build == 0) return null;
+      return UpdateInfo(
+        version: version,
+        build: build,
+        date: first['date'] as String? ?? '',
+        features: features,
+        apkUrl: defaultApkUrl,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   int _buildFromVersion(String version) {
