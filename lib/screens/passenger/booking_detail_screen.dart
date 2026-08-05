@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/errors.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/frappe_api_client.dart';
 
 class BookingDetailScreen extends StatefulWidget {
@@ -19,6 +20,15 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   String? _error;
 
   FrappeApiClient get _frappe => context.read<FrappeApiClient>();
+
+  bool get _isOwner {
+    final b = _booking;
+    if (b == null) return false;
+    final riderUser = b['main_rider_user']?.toString();
+    if (riderUser == null || riderUser.isEmpty) return false;
+    final auth = context.read<AuthProvider>();
+    return riderUser.toLowerCase() == auth.user?.email?.toLowerCase();
+  }
 
   Color _statusColor(String? s) {
     switch (s) {
