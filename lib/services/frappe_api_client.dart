@@ -524,10 +524,10 @@ class FrappeApiClient {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getMyBookings() async {
+Future<List<Map<String, dynamic>>> getMyBookings() async {
     final result = await callMethod(
       '$_apiBase.booking.list_bookings',
-      query: {'mine': 1},
+      query: {'mine': '1'},
     );
     return _messageList(result);
   }
