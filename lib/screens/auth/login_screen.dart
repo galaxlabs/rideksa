@@ -557,6 +557,8 @@ class _SignUpTabState extends State<_SignUpTab> {
   final _licenseController = TextEditingController();
   final _idController = TextEditingController();
   final _companyController = TextEditingController();
+  final _companyTaxController = TextEditingController();
+  final _companyArController = TextEditingController();
   bool _showPassword = false;
   String? _error;
   late String _purpose;
@@ -617,7 +619,7 @@ class _SignUpTabState extends State<_SignUpTab> {
           ? _serviceContractType
           : null,
       companyName:
-          (_purpose == 'partner_company' || _purpose == 'customer_company')
+          (_purpose == 'partner_company' || _purpose == 'customer_company' || _purpose == 'captain')
           ? companyName
           : null,
       legalName: _legalNameController.text.trim(),
@@ -629,6 +631,8 @@ class _SignUpTabState extends State<_SignUpTab> {
       city: _cityController.text.trim(),
       licenseNo: _licenseController.text.trim(),
       idNumber: _idController.text.trim(),
+      companyTaxId: _companyTaxController.text.trim(),
+      companyNameAr: _companyArController.text.trim(),
       serviceTypes: 'All transport services',
     );
   }
@@ -802,6 +806,33 @@ class _SignUpTabState extends State<_SignUpTab> {
               decoration: _input(
                 'Driving license number',
                 Icons.drive_eta_outlined,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _companyController,
+              style: const TextStyle(color: Colors.white),
+              decoration: _input(
+                'Company name (creates new if not found)',
+                Icons.apartment_outlined,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _companyTaxController,
+              style: const TextStyle(color: Colors.white),
+              decoration: _input(
+                'Company Tax ID / VAT',
+                Icons.verified_outlined,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _companyArController,
+              style: const TextStyle(color: Colors.white),
+              decoration: _input(
+                'Company name (Arabic)',
+                Icons.translate,
               ),
             ),
           ],

@@ -410,6 +410,7 @@ class AuthService {
     String? driverCardExpiryDate,
     String? serviceTypes,
     required String fullName,
+    String? companyTaxId,
   }) {
     return _frappe.completeOnboarding(
       purpose: purpose,
@@ -436,6 +437,7 @@ class AuthService {
       driverCardNo: driverCardNo,
       driverCardExpiryDate: driverCardExpiryDate,
       serviceTypes: serviceTypes,
+      companyTaxId: companyTaxId,
       fullName: fullName,
     );
   }

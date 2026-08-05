@@ -360,6 +360,7 @@ class FrappeApiClient {
     String? driverCardExpiryDate,
     String? serviceTypes,
     required String fullName,
+    String? companyTaxId,
   }) async {
     final role = purpose == 'partner_company'
         ? 'Partner'
@@ -405,6 +406,9 @@ class FrappeApiClient {
             'driver_card_expiry_date': driverCardExpiryDate,
             'city': city,
             'address': address,
+            'company_name': companyName,
+            'company_tax_id': companyTaxId,
+            'company_name_ar': companyNameAr,
           },
         ),
       );

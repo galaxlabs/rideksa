@@ -134,6 +134,7 @@ class AuthProvider extends ChangeNotifier {
     String? driverCardNo,
     String? driverCardExpiryDate,
     String? serviceTypes,
+    String? companyTaxId,
   }) async {
     _state = AuthState.loading;
     _errorMessage = null;
@@ -172,6 +173,7 @@ class AuthProvider extends ChangeNotifier {
           driverCardNo: driverCardNo,
           driverCardExpiryDate: driverCardExpiryDate,
           serviceTypes: serviceTypes,
+          companyTaxId: companyTaxId,
           fullName: displayName ?? email,
         );
       } catch (e) {
