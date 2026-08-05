@@ -611,7 +611,6 @@ class _SignUpTabState extends State<_SignUpTab> {
       email,
       pass,
       displayName: name,
-      phone: _phoneController.text.trim(),
       purpose: _purpose,
       partnerType: _purpose == 'partner_company' ? _partnerType : null,
       serviceContractType: _partnerType == 'Service Contract'

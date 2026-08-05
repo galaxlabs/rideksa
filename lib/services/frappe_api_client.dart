@@ -750,6 +750,74 @@ class FrappeApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> getPaymentConfig() async {
+    return _messageMap(
+      await callMethod(
+        'ftms.api.payment.payment_config',
+        requiresSession: false,
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> createMoyasserPayment({
+    required double amount,
+    String currency = 'SAR',
+    String? description,
+    String? company,
+  }) async {
+    return _messageMap(
+      await callMethod(
+        'ftms.api.payment.create_moyasser_payment',
+        body: {
+          'amount': amount,
+          'currency': currency,
+          'description': description,
+          'company': company,
+        },
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> checkPaymentStatus(String paymentId) async {
+    return _messageMap(
+      await callMethod(
+        'ftms.api.payment.check_payment_status',
+        query: {'payment_id': paymentId},
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> driverMatchedBookings({
+    String? vehicleType,
+    double? latitude,
+    double? longitude,
+    int limit = 50,
+  }) async {
+    return _messageList(
+      await callMethod(
+        'ftms.matching.driver_matched_bookings',
+        query: {
+          if (vehicleType != null) 'vehicle_type': vehicleType,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+          'limit': limit,
+        },
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> bookingMatchedOffers(
+    String bookingName, {
+    int limit = 50,
+  }) async {
+    return _messageList(
+      await callMethod(
+        'ftms.matching.booking_matched_offers',
+        query: {'booking_name': bookingName, 'limit': limit},
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>> createGroupInvite(
     String bookingName, {
     int? expiresInHours,
