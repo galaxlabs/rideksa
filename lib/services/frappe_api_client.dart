@@ -70,7 +70,7 @@ class FrappeApiClient {
     await _storage.write(key: 'frappe_session', value: _cookie!);
   }
 
-  Future<void> loginWithFirebaseIdToken(String idToken) async {
+  Future<Map<String, dynamic>?> loginWithFirebaseIdToken(String idToken) async {
     final response = await _client.post(
       _methodUri('ftms.api.auth.login_with_firebase'),
       headers: {
@@ -100,6 +100,7 @@ class FrappeApiClient {
         value: message['api_token'].toString(),
       );
     }
+    return message is Map<String, dynamic> ? message : null;
   }
 
   Future<String> getFirebaseCustomToken({

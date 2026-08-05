@@ -349,7 +349,32 @@ class AuthService {
     if (token == null || token.isEmpty) {
       throw const AuthException('Could not obtain a Firebase login token.');
     }
-    await _frappe.loginWithFirebaseIdToken(token);
+    final frappeUser = await _frappe.loginWithFirebaseIdToken(token);
+    if (frappeUser != null) {
+      final frappeName = frappeUser['full_name']?.toString() ??
+          frappeUser['first_name']?.toString() ?? '';
+      if (frappeName.isNotEmpty && _currentUser != null &&
+          _currentUser!.displayName != frappeName) {
+        try {
+          await _firestore.setUser(UserModel(
+            uid: _currentUser!.uid,
+            displayName: frappeName,
+            email: _currentUser!.email ?? frappeUser['email']?.toString(),
+            phone: _currentUser!.phone ?? frappeUser['mobile_no']?.toString(),
+            role: _currentUser!.role,
+            lastLogin: DateTime.now(),
+            loginCount: _currentUser!.loginCount + 1,
+          ));
+          _currentUser = UserModel(
+            uid: _currentUser!.uid,
+            displayName: frappeName,
+            email: _currentUser!.email ?? frappeUser['email']?.toString(),
+            phone: _currentUser!.phone ?? frappeUser['mobile_no']?.toString(),
+            role: _currentUser!.role,
+          );
+        } catch (_) {}
+      }
+    }
   }
 
   Future<void> ensureFrappeSession() async {
