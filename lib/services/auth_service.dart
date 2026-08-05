@@ -118,12 +118,14 @@ class AuthService {
     String email,
     String password, {
     String? displayName,
+    String? phone,
   }) async {
     try {
       final customToken = await _frappe.registerAndGetFirebaseCustomToken(
         email: email,
         password: password,
         displayName: displayName,
+        mobileNo: phone,
       );
       final result = await _auth.signInWithCustomToken(customToken);
       final fbUser = result.user;
@@ -143,9 +145,11 @@ class AuthService {
 
   Future<UserModel> signInWithEmail(String email, String password) async {
     try {
+      final isPhone = _isMobileIdentifier(email);
       final customToken = await _frappe.getFirebaseCustomToken(
-        email: email,
+        email: isPhone ? '' : email,
         password: password,
+        mobileNo: isPhone ? email : null,
       );
       final result = await _auth.signInWithCustomToken(customToken);
       final fbUser = result.user;
@@ -507,6 +511,14 @@ class AuthService {
       timeout: const Duration(seconds: 60),
     );
     return completer.future;
+  }
+
+  bool _isMobileIdentifier(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return false;
+    if (trimmed.contains('@')) return false;
+    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
+    return digits.length >= 9 && digits.length <= 15;
   }
 
   String _friendlyAuthError(fb.FirebaseAuthException e) {

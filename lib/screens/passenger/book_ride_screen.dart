@@ -46,9 +46,47 @@ class _BookRideScreenState extends State<BookRideScreen> {
   double _baseFare = 0;
   double _perPassengerRate = 0;
   List<_PassengerRow> _passengerRows = [];
+  List<Map<String, dynamic>> _savedGroups = [];
+  String? _selectedSavedGroup;
+  bool _loadingGroups = false;
 
   double get _fare => double.tryParse(_priceController.text) ?? 0;
   double get _platformFee => _fare * 0.05;
+
+  Future<void> _loadSavedGroups() async {
+    if (_loadingGroups) return;
+    setState(() => _loadingGroups = true);
+    try {
+      final frappe = context.read<FrappeApiClient>();
+      _savedGroups = await frappe.listMyGroups();
+    } catch (_) {
+      _savedGroups = [];
+    } finally {
+      if (mounted) setState(() => _loadingGroups = false);
+    }
+  }
+
+  Future<void> _applySavedGroup(String groupId) async {
+    try {
+      final frappe = context.read<FrappeApiClient>();
+      final group = await frappe.getGroup(groupId);
+      final passengers = (group['passengers'] as List?) ?? [];
+      for (final row in _passengerRows) {
+        row.controller.dispose();
+      }
+      _passengerRows.clear();
+      _groupController.text = group['group_name']?.toString() ?? '';
+      for (final p in passengers) {
+        _passengerRows.add(_PassengerRow(
+          controller: TextEditingController(text: p['passenger_name']?.toString() ?? ''),
+          mobileController: TextEditingController(text: p['mobile_no']?.toString() ?? ''),
+        ));
+      }
+      _passengers = _passengerRows.length;
+      _selectedSavedGroup = groupId;
+      setState(() {});
+    } catch (_) {}
+  }
 
   @override
   void initState() {
@@ -173,6 +211,22 @@ class _BookRideScreenState extends State<BookRideScreen> {
         operationId = const Uuid().v4();
         await preferences.setString(operationKey, operationId);
       }
+      final groupNameText = _isGroupBooking ? _groupController.text.trim() : null;
+      if (groupNameText != null && groupNameText.isNotEmpty) {
+        try {
+          final frappe = context.read<FrappeApiClient>();
+          await frappe.saveGroup(
+            groupName: groupNameText,
+            groupLeaderName: auth.user?.displayName,
+            groupLeaderMobile: auth.user?.phone,
+            isGroupLeaderSelf: true,
+            group: _selectedSavedGroup,
+            passengers: passengerRows,
+          );
+        } catch (_) {
+          // Group save is best-effort; booking should still proceed
+        }
+      }
       await rideProvider.createRideRequest(
         id: operationId,
         pickupLocation: _pickupController.text.trim(),
@@ -198,7 +252,7 @@ class _BookRideScreenState extends State<BookRideScreen> {
         rentalDays: _serviceType == 'rent_car'
             ? int.tryParse(_rentalDaysController.text.trim()) ?? 1
             : 1,
-        groupName: _isGroupBooking ? _groupController.text.trim() : null,
+        groupName: groupNameText,
         passengerNames: passengerRows
             .map((r) => r['passenger_name'].toString())
             .toList(),
@@ -455,7 +509,10 @@ class _BookRideScreenState extends State<BookRideScreen> {
                 'Add family members or group passengers (one row per person)',
               ),
               value: _isGroupBooking,
-              onChanged: (v) => setState(() => _isGroupBooking = v),
+              onChanged: (v) {
+                setState(() => _isGroupBooking = v);
+                if (v) _loadSavedGroups();
+              },
             ),
             if (_isGroupBooking) ...[
               TextField(
@@ -466,6 +523,40 @@ class _BookRideScreenState extends State<BookRideScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+              if (_savedGroups.isNotEmpty) ...[
+                DropdownButtonFormField<String?>(
+                  value: _selectedSavedGroup,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Apply saved group',
+                    prefixIcon: Icon(Icons.save_outlined),
+                  ),
+                  dropdownColor: Colors.grey[900],
+                  style: const TextStyle(color: Colors.white),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Enter passengers manually'),
+                    ),
+                    ..._savedGroups.map((g) => DropdownMenuItem<String?>(
+                      value: g['name']?.toString(),
+                      child: Text(
+                        '${g['group_name'] ?? g['name']} (${g['seat_count'] ?? 0} pax)',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) _applySavedGroup(v);
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_loadingGroups)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: LinearProgressIndicator(),
+                ),
               Text(
                 'Passengers & Family Members',
                 style: Theme.of(
@@ -650,8 +741,8 @@ class _BookRideScreenState extends State<BookRideScreen> {
 class _PassengerRow {
   final TextEditingController controller;
   final TextEditingController mobileController;
-  _PassengerRow({required this.controller})
-    : mobileController = TextEditingController();
+  _PassengerRow({required this.controller, TextEditingController? mobileController})
+    : mobileController = mobileController ?? TextEditingController();
   String get mobile => mobileController.text.trim();
 }
 

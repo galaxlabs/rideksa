@@ -134,6 +134,58 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       }
     }
   }
+  bool get _canStart {
+    final b = _booking;
+    if (b == null) return false;
+    final negotiation = b['negotiation_status'] as String?;
+    final bstatus = b['booking_status'] as String?;
+    if (negotiation == 'Cancelled' || bstatus == 'Cancelled') return false;
+    if (negotiation == 'Completed' || bstatus == 'Closed') return false;
+    return negotiation == 'Trip Created' || negotiation == 'Confirmed';
+  }
+
+  Future<void> _startRide() async {
+    try {
+      final result = await _frappe.startBooking(widget.bookingName);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ride started � ${result['status'] ?? ''}'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  void _repeatBooking() {
+    final b = _booking;
+    if (b == null) return;
+    final extra = <String, dynamic>{
+      'from': b['pickup_point']?.toString() ?? '',
+      'to': b['drop_point']?.toString() ?? '',
+      'route': b['route']?.toString(),
+    };
+    final passengers = (b['passengers'] as List?) ?? [];
+    if (passengers.isNotEmpty) {
+      extra['passenger_rows'] = passengers
+          .map((p) => {
+                'passenger_name': p['passenger_name']?.toString() ?? '',
+                'mobile_no': p['mobile_no']?.toString() ?? '',
+                'nationality': p['nationality']?.toString() ?? '',
+              })
+          .toList();
+      extra['group_name'] = b['booking_group_code']?.toString();
+    }
+    context.push('/passenger/book', extra: extra);
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -434,6 +486,39 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   ),
                 ),
               ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (_canStart)
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _startRide,
+                    icon: const Icon(Icons.play_arrow, size: 18),
+                    label: const Text('Start Ride'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 46),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _repeatBooking,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Repeat Booking'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                  ),
+                ),
+              ),
             ],
           ),
         ],

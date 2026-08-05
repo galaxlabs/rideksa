@@ -405,11 +405,15 @@ class _LoginTabState extends State<_LoginTab> {
   bool _showPassword = false;
   bool _resetting = false;
 
+  bool get _isPhone =>
+      !_emailController.text.trim().contains('@') &&
+      _emailController.text.trim().replaceAll(RegExp(r'\D'), '').length >= 9;
+
   void _login() {
-    final email = _emailController.text.trim();
+    final identifier = _emailController.text.trim();
     final pass = _passwordController.text;
-    if (email.isEmpty || pass.isEmpty) return;
-    widget.auth.loginWithEmail(email, pass);
+    if (identifier.isEmpty || pass.isEmpty) return;
+    widget.auth.loginWithEmail(identifier, pass);
   }
 
   Future<void> _resetPassword() async {
@@ -455,7 +459,11 @@ class _LoginTabState extends State<_LoginTab> {
           TextField(
             controller: _emailController,
             style: const TextStyle(color: Colors.white),
-            decoration: _input('Email', Icons.email_outlined),
+            onChanged: (_) => setState(() {}),
+            decoration: _input(
+              _isPhone ? 'Mobile Number' : 'Email or Mobile Number',
+              _isPhone ? Icons.phone_outlined : Icons.email_outlined,
+            ),
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 12),
@@ -480,7 +488,7 @@ class _LoginTabState extends State<_LoginTab> {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: _resetting ? null : _resetPassword,
-              child: const Text('Forgot Frappe password?'),
+              child: const Text('Forgot password?'),
             ),
           ),
           const SizedBox(height: 8),
@@ -603,6 +611,7 @@ class _SignUpTabState extends State<_SignUpTab> {
       email,
       pass,
       displayName: name,
+      phone: _phoneController.text.trim(),
       purpose: _purpose,
       partnerType: _purpose == 'partner_company' ? _partnerType : null,
       serviceContractType: _partnerType == 'Service Contract'

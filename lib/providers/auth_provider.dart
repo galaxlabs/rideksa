@@ -143,6 +143,7 @@ class AuthProvider extends ChangeNotifier {
         email,
         password,
         displayName: displayName,
+        phone: phone,
       );
       try {
         await _authService.ensureFrappeSession();

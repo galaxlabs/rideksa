@@ -80,6 +80,7 @@ class SyncService {
         passengerList: ride.passengerRows.isNotEmpty
             ? ride.passengerRows
             : null,
+        groupName: ride.groupName,
       );
       final frappeId = result['name'] as String?;
       return frappeId;

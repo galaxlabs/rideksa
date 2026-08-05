@@ -105,11 +105,16 @@ class FrappeApiClient {
   Future<String> getFirebaseCustomToken({
     required String email,
     required String password,
+    String? mobileNo,
   }) async {
     final result = _messageMap(
       await callMethod(
         'ftms.api.auth.firebase_token_from_frappe_password',
-        body: {'email': email, 'password': password},
+        body: {
+          'email': email,
+          if (mobileNo != null) 'mobile_no': mobileNo,
+          'password': password,
+        },
         requiresSession: false,
       ),
     );
@@ -124,6 +129,7 @@ class FrappeApiClient {
     required String email,
     required String password,
     String? displayName,
+    String? mobileNo,
   }) async {
     final result = _messageMap(
       await callMethod(
@@ -132,6 +138,7 @@ class FrappeApiClient {
           'email': email,
           'password': password,
           'display_name': displayName,
+          'mobile_no': mobileNo,
         },
         requiresSession: false,
       ),
@@ -288,6 +295,10 @@ class FrappeApiClient {
     double? pickupLng,
     List<Map<String, dynamic>>? passengerList,
     String? externalReference,
+    String? group,
+    String? groupName,
+    String? groupLeaderName,
+    String? groupLeaderMobile,
   }) async {
     final body = <String, dynamic>{
       'pickup_point': pickup,
@@ -308,6 +319,12 @@ class FrappeApiClient {
     if (passengerList != null && passengerList.isNotEmpty) {
       body['passengers'] = passengerList;
       body['seat_count'] = passengerList.length;
+    }
+    if (group != null) body['group'] = group;
+    if (groupName != null) body['group_name'] = groupName;
+    if (groupLeaderName != null) body['group_leader_name'] = groupLeaderName;
+    if (groupLeaderMobile != null) {
+      body['group_leader_mobile'] = groupLeaderMobile;
     }
     final result = await callMethod(
       '$_apiBase.booking.create_booking',
@@ -662,6 +679,74 @@ class FrappeApiClient {
     await callMethod(
       '$_apiBase.notifications.unregister_device_token',
       body: {'token': token},
+    );
+  }
+
+  Future<Map<String, dynamic>> saveGroup({
+    required String groupName,
+    String? groupLeaderName,
+    String? groupLeaderMobile,
+    bool isGroupLeaderSelf = false,
+    String? defaultPickupPoint,
+    String? defaultDropPoint,
+    String? defaultVehicleType,
+    String? group,
+    List<Map<String, dynamic>>? passengers,
+  }) async {
+    return _messageMap(
+      await callMethod(
+        '$_apiBase.group.save_group',
+        body: {
+          'group_name': groupName,
+          'group_leader_name': groupLeaderName,
+          'group_leader_mobile': groupLeaderMobile,
+          'is_group_leader_self': isGroupLeaderSelf,
+          'default_pickup_point': defaultPickupPoint,
+          'default_drop_point': defaultDropPoint,
+          'default_vehicle_type': defaultVehicleType,
+          'group': group,
+          'passengers': passengers,
+        },
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> listMyGroups() async {
+    return _messageList(
+      await callMethod('$_apiBase.group.list_my_groups'),
+    );
+  }
+
+  Future<Map<String, dynamic>> getGroup(String group) async {
+    return _messageMap(
+      await callMethod('$_apiBase.group.get_group', query: {'group': group}),
+    );
+  }
+
+  Future<Map<String, dynamic>> deleteGroup(String group) async {
+    return _messageMap(
+      await callMethod(
+        '$_apiBase.group.delete_group',
+        query: {'group': group},
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> startBooking(String bookingName) async {
+    return _messageMap(
+      await callMethod(
+        '$_apiBase.booking.start_booking',
+        query: {'booking_name': bookingName},
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> completeBooking(String bookingName) async {
+    return _messageMap(
+      await callMethod(
+        '$_apiBase.booking.complete_booking',
+        query: {'booking_name': bookingName},
+      ),
     );
   }
 
