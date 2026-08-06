@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../services/frappe_api_client.dart';
 
@@ -9,12 +10,13 @@ class DriverVehiclesScreen extends StatefulWidget {
 }
 
 class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
-  final _api = FrappeApiClient();
   final _plate = TextEditingController();
   final _capacity = TextEditingController(text: '4');
   List<Map<String, dynamic>> _makes = [], _models = [], _types = [], _vehicles = [];
   String? _make, _model, _type, _error;
   bool _loading = true, _saving = false;
+
+  FrappeApiClient get _api => context.read<FrappeApiClient>();
 
   List<Map<String, dynamic>> _rows(dynamic value) => value is List
       ? value.whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList()
@@ -57,7 +59,10 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
     }
     setState(() { _saving = true; _error = null; });
     try {
-      await _api.registerVehicle(plateNo: _plate.text.trim(), vehicleMake: _make!, vehicleModel: _model!, vehicleType: _type, passengerCapacity: int.tryParse(_capacity.text.trim()));
+      await _api.registerVehicle(
+        plateNo: _plate.text.trim(), vehicleMake: _make!, vehicleModel: _model!,
+        vehicleType: _type, passengerCapacity: int.tryParse(_capacity.text.trim()),
+      );
       _plate.clear(); _make = null; _model = null; _type = null;
       if (mounted) await _load();
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
@@ -65,7 +70,7 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
   }
 
   @override
-  void dispose() { _api.dispose(); _plate.dispose(); _capacity.dispose(); super.dispose(); }
+  void dispose() { _plate.dispose(); _capacity.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -87,21 +92,21 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
           DropdownButtonFormField<String>(
             value: _make,
             decoration: const InputDecoration(labelText: 'Make'),
-            items: _makes.map((row) => DropdownMenuItem(value: row['name'] as String?, child: Text(row['make_name'] as String? ?? (row['name'] as String?) as String? ?? ''))).toList(),
+            items: _makes.map((r) => DropdownMenuItem(value: r['name'] as String?, child: Text((r['make_name'] ?? r['name'] ?? '').toString()))).toList(),
             onChanged: _onMakeChanged,
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             value: _model,
             decoration: const InputDecoration(labelText: 'Model'),
-            items: _models.map((row) => DropdownMenuItem(value: row['name'] as String?, child: Text(row['model_name'] as String? ?? (row['name'] as String?) as String? ?? ''))).toList(),
+            items: _models.map((r) => DropdownMenuItem(value: r['name'] as String?, child: Text((r['model_name'] ?? r['name'] ?? '').toString()))).toList(),
             onChanged: _onModelChanged,
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             value: _type,
             decoration: const InputDecoration(labelText: 'Vehicle type'),
-            items: _types.map((row) => DropdownMenuItem(value: row['name'] as String?, child: Text(row['type_name'] as String? ?? (row['name'] as String?) as String? ?? ''))).toList(),
+            items: _types.map((r) => DropdownMenuItem(value: r['name'] as String?, child: Text((r['type_name'] ?? r['name'] ?? '').toString()))).toList(),
             onChanged: (v) => setState(() => _type = v),
           ),
           const SizedBox(height: 10),
@@ -111,11 +116,11 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
         ]))),
         const SizedBox(height: 16),
         Text('Registered vehicles (${_vehicles.length})', style: Theme.of(context).textTheme.titleMedium),
-        ..._vehicles.map((vehicle) => Card(child: ListTile(
+        ..._vehicles.map((v) => Card(child: ListTile(
           leading: const Icon(Icons.directions_car, color: AppColors.primary),
-          title: Text(vehicle['vehicle_name']?.toString() ?? vehicle['name']?.toString() ?? ''),
-          subtitle: Text('${vehicle['plate_no'] ?? 'No plate'} \u2022 ${vehicle['vehicle_make'] ?? ''} ${vehicle['vehicle_model'] ?? ''}'),
-          trailing: Text(vehicle['status']?.toString() ?? 'Active'),
+          title: Text((v['vehicle_name'] ?? v['name'] ?? '').toString()),
+          subtitle: Text('${v['plate_no'] ?? 'No plate'} \u2022 ${v['vehicle_make'] ?? ''} ${v['vehicle_model'] ?? ''}'),
+          trailing: Text((v['status'] ?? 'Active').toString()),
         ))),
       ]),
     );
