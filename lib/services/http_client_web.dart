@@ -11,4 +11,5 @@ class _NoExpectBrowserClient extends http.BaseClient {
   }
 }
 
+// Must be called to prevent tree-shaking
 http.Client createFrappeHttpClient() => _NoExpectBrowserClient();

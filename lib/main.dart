@@ -11,11 +11,13 @@ import 'services/app_config_service.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/frappe_api_client.dart';
-import 'services/location_service.dart';
+import 'services/firestore_service.dart';
 import 'services/sync_service.dart';
 import 'services/wallet_service.dart';
 import 'services/notification_service.dart';
+import 'services/http_client.dart';
 import 'services/integrity_service.dart';
+import 'services/location_service.dart';
 import 'services/bank_notification_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/ride_provider.dart';
@@ -85,7 +87,7 @@ class _Providers extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firestore = FirestoreService();
-    final frappe = FrappeApiClient();
+    final frappe = FrappeApiClient(client: createFrappeHttpClient());
     final authService = AuthService(firestore, frappe);
     final locationService = LocationService();
     final syncService = SyncService(firestore, frappe);
