@@ -62,7 +62,7 @@ GoRouter createRouter(AuthProvider auth) {
         if (role == UserRole.superAdmin) return '/super-admin';
         return '/admin';
       }
-      if (location == '/auth/role-select') return '/auth/login';
+      if (location == '/auth/role-select' && loggedIn) return '/auth/login';
       if (!loggedIn && !onAuthPage) return '/auth/login';
       if (loggedIn && onAuthPage) {
         final role = auth.user?.role;

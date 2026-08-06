@@ -264,6 +264,10 @@ class AuthProvider extends ChangeNotifier {
   Future<void> updateRole(UserRole role, {String? companyId}) async {
     await _authService.updateRole(role, companyId: companyId);
     _user = _authService.currentUser;
+    // Persist role to Firestore so session restore picks it up
+    if (_user != null) {
+      try { await _firestore.setUser(_user!); } catch (_) {}
+    }
     notifyListeners();
   }
 

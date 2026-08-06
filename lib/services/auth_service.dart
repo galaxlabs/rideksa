@@ -351,27 +351,34 @@ class AuthService {
     }
     final frappeUser = await _frappe.loginWithFirebaseIdToken(token);
     if (frappeUser != null) {
+      // Determine role from Frappe roles
+      final roles = (frappeUser['roles'] as List?)?.cast<String>() ?? [];
+      UserRole? frappeRole;
+      if (roles.contains('Captain')) frappeRole = UserRole.driver;
+      else if (roles.contains('Company Admin') || roles.contains('Dispatcher'))
+        frappeRole = UserRole.admin;
+      else if (roles.contains('Passenger')) frappeRole = UserRole.passenger;
+
       final frappeName = frappeUser['full_name']?.toString() ??
           frappeUser['first_name']?.toString() ?? '';
-      if (frappeName.isNotEmpty && _currentUser != null &&
-          _currentUser!.displayName != frappeName) {
+      final roleChanged = frappeRole != null &&
+          (_currentUser == null || _currentUser!.role != frappeRole);
+      final nameChanged = frappeName.isNotEmpty && _currentUser != null &&
+          _currentUser!.displayName != frappeName;
+
+      if (roleChanged || nameChanged) {
+        final updated = UserModel(
+          uid: _currentUser?.uid ?? fbUser.uid,
+          phone: _currentUser?.phone ?? frappeUser['mobile_no']?.toString(),
+          email: _currentUser?.email ?? frappeUser['email']?.toString(),
+          displayName: nameChanged ? frappeName : (_currentUser?.displayName),
+          role: frappeRole ?? _currentUser?.role ?? UserRole.passenger,
+          lastLogin: DateTime.now(),
+          loginCount: (_currentUser?.loginCount ?? 0) + 1,
+        );
         try {
-          await _firestore.setUser(UserModel(
-            uid: _currentUser!.uid,
-            displayName: frappeName,
-            email: _currentUser!.email ?? frappeUser['email']?.toString(),
-            phone: _currentUser!.phone ?? frappeUser['mobile_no']?.toString(),
-            role: _currentUser!.role,
-            lastLogin: DateTime.now(),
-            loginCount: _currentUser!.loginCount + 1,
-          ));
-          _currentUser = UserModel(
-            uid: _currentUser!.uid,
-            displayName: frappeName,
-            email: _currentUser!.email ?? frappeUser['email']?.toString(),
-            phone: _currentUser!.phone ?? frappeUser['mobile_no']?.toString(),
-            role: _currentUser!.role,
-          );
+          await _firestore.setUser(updated);
+          _currentUser = updated;
         } catch (_) {}
       }
     }
