@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/driver_model.dart';
 import '../models/ride_request_model.dart';
 import '../services/firestore_service.dart';
+import '../services/frappe_api_client.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 
@@ -10,6 +11,7 @@ class DriverProvider extends ChangeNotifier {
   final FirestoreService _firestore;
   final LocationService _locationService;
   final NotificationService _notificationService;
+  FrappeApiClient? _frappe;
 
   DriverModel? _myProfile;
   List<RideRequestModel> _nearbyRides = [];
@@ -105,6 +107,31 @@ class DriverProvider extends ChangeNotifier {
     _myProfile = driver;
     _loading = false;
     notifyListeners();
+  }
+
+  void setFrappeClient(FrappeApiClient frappe) {
+    _frappe = frappe;
+  }
+
+  List<Map<String, dynamic>> _frappeBookings = [];
+  List<Map<String, dynamic>> get frappeBookings => _frappeBookings;
+
+  Future<void> fetchFrappeBookings({
+    String? vehicleType,
+    double? latitude,
+    double? longitude,
+  }) async {
+    if (_frappe == null) return;
+    try {
+      _frappeBookings = await _frappe!.driverMatchedBookings(
+        vehicleType: vehicleType,
+        latitude: latitude ?? _myProfile?.latitude,
+        longitude: longitude ?? _myProfile?.longitude,
+      );
+      notifyListeners();
+    } catch (_) {
+      _frappeBookings = [];
+    }
   }
 
   @override
