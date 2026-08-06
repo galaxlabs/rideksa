@@ -502,10 +502,12 @@ class FrappeApiClient {
 
   Future<Map<String, dynamic>> getVehicleCatalog({
     String? make,
+    String? model,
     String? type,
   }) async {
     final query = <String, dynamic>{'limit': '100'};
     if (make != null) query['make'] = make;
+    if (model != null) query['model'] = model;
     if (type != null) query['vehicle_type'] = type;
     return _messageMap(
       await callMethod(

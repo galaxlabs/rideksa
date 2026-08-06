@@ -28,8 +28,26 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
       final catalog = await _api.getVehicleCatalog();
       final vehicles = await _api.listMyVehicles();
       if (!mounted) return;
-      setState(() { _makes = _rows(catalog['makes']); _models = _rows(catalog['models']); _types = _rows(catalog['types']); _vehicles = vehicles; _loading = false; });
+      setState(() { _makes = _rows(catalog['makes']); _vehicles = vehicles; _loading = false; });
     } catch (e) { if (mounted) setState(() { _error = e.toString(); _loading = false; }); }
+  }
+
+  Future<void> _onMakeChanged(String? value) async {
+    setState(() { _make = value; _model = null; _type = null; _models = []; _types = []; });
+    if (value == null) return;
+    try {
+      final catalog = await _api.getVehicleCatalog(make: value);
+      if (mounted) setState(() => _models = _rows(catalog['models']));
+    } catch (_) {}
+  }
+
+  Future<void> _onModelChanged(String? value) async {
+    setState(() { _model = value; _type = null; _types = []; });
+    if (value == null) return;
+    try {
+      final catalog = await _api.getVehicleCatalog(make: _make, model: value);
+      if (mounted) setState(() => _types = _rows(catalog['types']));
+    } catch (_) {}
   }
 
   Future<void> _save() async {
@@ -40,7 +58,7 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
     setState(() { _saving = true; _error = null; });
     try {
       await _api.registerVehicle(plateNo: _plate.text.trim(), vehicleMake: _make!, vehicleModel: _model!, vehicleType: _type, passengerCapacity: int.tryParse(_capacity.text.trim()));
-      _plate.clear(); _make = null; _model = null;
+      _plate.clear(); _make = null; _model = null; _type = null;
       if (mounted) await _load();
     } catch (e) { if (mounted) setState(() => _error = e.toString()); }
     if (mounted) setState(() => _saving = false);
@@ -54,17 +72,38 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('My Vehicles')),
       body: _loading ? const Center(child: CircularProgressIndicator()) : ListView(padding: const EdgeInsets.all(16), children: [
-        if (_error != null) Text(_error!, style: const TextStyle(color: AppColors.error)),
+        if (_error != null) Container(
+          padding: const EdgeInsets.all(12), margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(color: AppColors.error.withAlpha(20), borderRadius: BorderRadius.circular(8)),
+          child: Text(_error!, style: const TextStyle(color: AppColors.error)),
+        ),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('Register another vehicle', style: Theme.of(context).textTheme.titleMedium),
+          Text('Register a vehicle', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
-          TextField(controller: _plate, decoration: const InputDecoration(labelText: 'Plate number')),
+          TextField(controller: _plate, decoration: const InputDecoration(
+            labelText: 'Plate number', hintText: 'e.g. ABC 1234 or No Plate',
+          )),
           const SizedBox(height: 10),
-          DropdownButtonFormField<String>(value: _make, decoration: const InputDecoration(labelText: 'Make'), items: _makes.map((row) => DropdownMenuItem(value: row['name']?.toString(), child: Text(row['make_name']?.toString() ?? row['name']?.toString() ?? ''))).toList(), onChanged: (value) async { setState(() { _make = value; _model = null; }); final catalog = await _api.getVehicleCatalog(make: value); if (mounted) setState(() => _models = _rows(catalog['models'])); }),
+          DropdownButtonFormField<String>(
+            value: _make,
+            decoration: const InputDecoration(labelText: 'Make'),
+            items: _makes.map((row) => DropdownMenuItem(value: row['name'] as String?, child: Text(row['make_name'] as String? ?? (row['name'] as String?) as String? ?? ''))).toList(),
+            onChanged: _onMakeChanged,
+          ),
           const SizedBox(height: 10),
-          DropdownButtonFormField<String>(value: _model, decoration: const InputDecoration(labelText: 'Model'), items: _models.map((row) => DropdownMenuItem(value: row['name']?.toString(), child: Text(row['model_name']?.toString() ?? row['name']?.toString() ?? ''))).toList(), onChanged: (value) => setState(() => _model = value)),
+          DropdownButtonFormField<String>(
+            value: _model,
+            decoration: const InputDecoration(labelText: 'Model'),
+            items: _models.map((row) => DropdownMenuItem(value: row['name'] as String?, child: Text(row['model_name'] as String? ?? (row['name'] as String?) as String? ?? ''))).toList(),
+            onChanged: _onModelChanged,
+          ),
           const SizedBox(height: 10),
-          DropdownButtonFormField<String>(value: _type, decoration: const InputDecoration(labelText: 'Vehicle type'), items: _types.map((row) => DropdownMenuItem(value: row['name']?.toString(), child: Text(row['type_name']?.toString() ?? row['name']?.toString() ?? ''))).toList(), onChanged: (value) => setState(() => _type = value)),
+          DropdownButtonFormField<String>(
+            value: _type,
+            decoration: const InputDecoration(labelText: 'Vehicle type'),
+            items: _types.map((row) => DropdownMenuItem(value: row['name'] as String?, child: Text(row['type_name'] as String? ?? (row['name'] as String?) as String? ?? ''))).toList(),
+            onChanged: (v) => setState(() => _type = v),
+          ),
           const SizedBox(height: 10),
           TextField(controller: _capacity, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Passenger capacity')),
           const SizedBox(height: 14),
@@ -72,7 +111,12 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
         ]))),
         const SizedBox(height: 16),
         Text('Registered vehicles (${_vehicles.length})', style: Theme.of(context).textTheme.titleMedium),
-        ..._vehicles.map((vehicle) => Card(child: ListTile(leading: const Icon(Icons.directions_car, color: AppColors.primary), title: Text(vehicle['vehicle_name']?.toString() ?? vehicle['name']?.toString() ?? ''), subtitle: Text('${vehicle['plate_no'] ?? ''} • ${vehicle['vehicle_make'] ?? ''} ${vehicle['vehicle_model'] ?? ''}'), trailing: Text(vehicle['status']?.toString() ?? 'Active')))),
+        ..._vehicles.map((vehicle) => Card(child: ListTile(
+          leading: const Icon(Icons.directions_car, color: AppColors.primary),
+          title: Text(vehicle['vehicle_name']?.toString() ?? vehicle['name']?.toString() ?? ''),
+          subtitle: Text('${vehicle['plate_no'] ?? 'No plate'} \u2022 ${vehicle['vehicle_make'] ?? ''} ${vehicle['vehicle_model'] ?? ''}'),
+          trailing: Text(vehicle['status']?.toString() ?? 'Active'),
+        ))),
       ]),
     );
   }
