@@ -757,6 +757,15 @@ Future<List<Map<String, dynamic>>> getMyBookings() async {
     );
   }
 
+  Future<Map<String, dynamic>> getCurrentFrappeUser() async {
+    return _messageMap(
+      await callMethod(
+        'ftms.api.auth.get_current_user',
+        requiresSession: false,
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>> getPaymentConfig() async {
     return _messageMap(
       await callMethod(

@@ -13,7 +13,7 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
   final _plate = TextEditingController();
   final _capacity = TextEditingController(text: '4');
   List<Map<String, dynamic>> _makes = [], _models = [], _types = [], _vehicles = [];
-  String? _make, _model, _type, _error;
+  String? _make, _model, _type, _error, _company;
   bool _loading = true, _saving = false;
 
   FrappeApiClient get _api => context.read<FrappeApiClient>();
@@ -29,8 +29,15 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
     try {
       final catalog = await _api.getVehicleCatalog();
       final vehicles = await _api.listMyVehicles();
+      String? company;
+      try {
+        final me = await _api.getCurrentFrappeUser();
+        if (me['is_authenticated'] == true) {
+          company = me['company']?.toString() ?? me['company_data']?['company_name']?.toString();
+        }
+      } catch (_) {}
       if (!mounted) return;
-      setState(() { _makes = _rows(catalog['makes']); _vehicles = vehicles; _loading = false; });
+      setState(() { _makes = _rows(catalog['makes']); _vehicles = vehicles; _company = company; _loading = false; });
     } catch (e) { if (mounted) setState(() { _error = e.toString(); _loading = false; }); }
   }
 
@@ -84,6 +91,10 @@ class _DriverVehiclesScreenState extends State<DriverVehiclesScreen> {
         ),
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text('Register a vehicle', style: Theme.of(context).textTheme.titleMedium),
+          if (_company != null && _company!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('Company: $_company', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ],
           const SizedBox(height: 12),
           TextField(controller: _plate, decoration: const InputDecoration(
             labelText: 'Plate number', hintText: 'e.g. ABC 1234 or No Plate',
