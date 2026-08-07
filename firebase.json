@@ -12,6 +12,14 @@
         "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
       },
       {
+        "source": "main.dart.js",
+        "headers": [{"key": "Cache-Control", "value": "no-cache, must-revalidate"}]
+      },
+      {
+        "source": "flutter_bootstrap.js",
+        "headers": [{"key": "Cache-Control", "value": "no-cache, must-revalidate"}]
+      },
+      {
         "source": "**",
         "headers": [
           {"key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups"},
