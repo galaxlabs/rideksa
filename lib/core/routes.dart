@@ -55,7 +55,7 @@ GoRouter createRouter(AuthProvider auth) {
         return null;
       }
       if (location == '/') {
-        if (!loggedIn) return '/auth/login';
+        if (!loggedIn) return '/auth/role-select';
         final role = auth.user?.role;
         if (role == UserRole.passenger) return '/passenger';
         if (role == UserRole.driver) return '/driver';
@@ -63,7 +63,7 @@ GoRouter createRouter(AuthProvider auth) {
         return '/admin';
       }
       if (location == '/auth/role-select' && loggedIn) return '/auth/login';
-      if (!loggedIn && !onAuthPage) return '/auth/login';
+      if (!loggedIn && !onAuthPage) return '/auth/role-select';
       if (loggedIn && onAuthPage) {
         final role = auth.user?.role;
         if (role == UserRole.passenger) return '/passenger';

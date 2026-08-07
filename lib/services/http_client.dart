@@ -7,7 +7,6 @@ class _WebSafeClient extends http.BaseClient {
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {
     request.headers.remove('Expect');
-    request.headers['X-Requested-With'] = 'RideKSA';
     return _inner.send(request);
   }
 }
